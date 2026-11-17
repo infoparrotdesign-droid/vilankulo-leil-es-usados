@@ -15,6 +15,13 @@
       "when": 1794905191198,
       "tag": "0001_enable_private_profile_photos_and_seller_contact",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794905687880,
+      "tag": "0002_validate_adult_profiles_and_allow_social_completion",
+      "breakpoints": true
     }
   ]
 }
