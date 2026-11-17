@@ -8,13 +8,11 @@ import {
   Bike,
   Check,
   ChevronDown,
-  Clock3,
   Gavel,
   Heart,
   ImagePlus,
   Laptop,
   MapPin,
-  Menu,
   Package,
   Search,
   ShieldCheck,
@@ -22,7 +20,6 @@ import {
   Smartphone,
   Sparkles,
   UserRound,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -131,6 +128,11 @@ export const Route = createFileRoute("/")({
       { property: "og:description", content: "O mercado local de artigos usados, com compra, venda e leilões em Vilankulo." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+    ],
+    links: [
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Serif+Display&display=swap" },
     ],
   }),
   component: Marketplace,
