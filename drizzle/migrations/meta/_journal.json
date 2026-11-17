@@ -8,6 +8,13 @@
       "when": 1794905039848,
       "tag": "0000_create_boladas_marketplace",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794905191198,
+      "tag": "0001_enable_private_profile_photos_and_seller_contact",
+      "breakpoints": true
     }
   ]
 }
