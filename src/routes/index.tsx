@@ -34,7 +34,7 @@ import bicyclePhoto from "@/assets/used-bicycle.jpg";
 import phonePhoto from "@/assets/used-phone.jpg";
 import chairPhoto from "@/assets/wooden-chair.jpg";
 
-const APP_NAME = "Boladas";
+const APP_NAME = "VilaShop";
 const imageBucket = "boladas-media";
 const categories = ["Todos", "Eletrónicos", "Casa", "Moda", "Desporto", "Veículos", "Outros"] as const;
 type Category = (typeof categories)[number];
@@ -122,9 +122,9 @@ const listingSchema = z.object({
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Boladas — compra, venda e leilões em Vilankulo" },
+      { title: "VilaShop — comunidade de compra e venda em Moçambique" },
       { name: "description", content: "Descubra artigos usados à venda e leilões em Vilankulo. Publique, encontre e negocie artigos entre pessoas da comunidade." },
-      { property: "og:title", content: "Boladas — compra, venda e leilões em Vilankulo" },
+      { property: "og:title", content: "VilaShop — comunidade de compra e venda em Moçambique" },
       { property: "og:description", content: "O mercado local de artigos usados, com compra, venda e leilões em Vilankulo." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -173,7 +173,7 @@ function Marketplace() {
       } else {
         setProfileReady(false);
         setShowRegister(true);
-        toast.info("Complete os seus dados para utilizar o Boladas.");
+        toast.info("Complete os seus dados para utilizar o VilaShop.");
       }
     }
 
@@ -328,7 +328,7 @@ function Marketplace() {
     }
     setProfileReady(true);
     setShowRegister(false);
-    toast.success("Perfil pronto. Bem-vindo ao Boladas.");
+    toast.success("Perfil pronto. Bem-vindo ao VilaShop.");
   }
 
   async function signinWith(provider: "google" | "lovable") {
@@ -401,7 +401,7 @@ function Marketplace() {
     }
     setShowCreate(false);
     form.reset();
-    toast.success("Artigo publicado. Já aparece no Boladas.");
+    toast.success("Artigo publicado. Já aparece no VilaShop.");
     const { data: refreshed, error: refreshError } = await supabase
       .from("listings")
       .select("id, seller_id, title, description, category, item_condition, listing_type, price, highest_bid, photo_path")
@@ -477,9 +477,9 @@ function Marketplace() {
       <div className="market-topline"><MapPin size={15} aria-hidden="true" /> Feito para Vilankulo, Moçambique</div>
       <header className="market-header">
         <div className="market-shell market-header-content">
-          <a href="#inicio" className="market-logo" aria-label="Boladas — início">
+          <a href="#inicio" className="market-logo" aria-label="VilaShop — início">
             <span className="market-logo-mark" aria-hidden="true"><ShoppingBag size={21} /></span>
-            <span>BOLADAS<span className="market-logo-period">.</span></span>
+            <span>VILASHOP<span className="market-logo-period">.</span></span>
           </a>
           <nav className="market-primary-nav" aria-label="Navegação principal">
             <a href="#artigos">Explorar</a>
@@ -586,7 +586,7 @@ function Marketplace() {
       </section>
 
       <footer className="market-footer">
-        <div className="market-shell market-footer-main"><a href="#inicio" className="market-logo market-footer-logo"><span className="market-logo-mark" aria-hidden="true"><ShoppingBag size={19} /></span><span>BOLADAS<span className="market-logo-period">.</span></span></a><p>Boas coisas circulam.</p><div className="market-footer-place"><MapPin size={15} /> Vilankulo, Moçambique</div></div>
+        <div className="market-shell market-footer-main"><a href="#inicio" className="market-logo market-footer-logo"><span className="market-logo-mark" aria-hidden="true"><ShoppingBag size={19} /></span><span>VILASHOP<span className="market-logo-period">.</span></span></a><p>Boas coisas circulam.</p><div className="market-footer-place"><MapPin size={15} /> Vilankulo, Moçambique</div></div>
         <div className="market-shell market-footer-bottom"><span>© {new Date().getFullYear()} Boladas</span><span>Só para maiores de 18 anos</span><span className="market-adult-mark"><BadgeCheck size={14} /> Uma comunidade local</span></div>
       </footer>
 
@@ -688,7 +688,7 @@ function AuthDialogs({
     <>
       <Dialog open={showLogin} onOpenChange={setShowLogin}>
         <DialogContent className="market-dialog-content">
-          <DialogHeader className="market-form-header"><span className="market-form-kicker">Que bom ver-te</span><DialogTitle>Entre no Boladas</DialogTitle><DialogDescription>A sua conta aproxima-o da comunidade de Vilankulo.</DialogDescription></DialogHeader>
+          <DialogHeader className="market-form-header"><span className="market-form-kicker">Que bom ver-te</span><DialogTitle>Entre no VilaShop</DialogTitle><DialogDescription>A sua conta aproxima-o da comunidade de Vilankulo.</DialogDescription></DialogHeader>
           <form className="market-form" onSubmit={(event) => void onLogin(event)}>
             <FormField label="Email" htmlFor="login-email"><Input id="login-email" name="email" type="email" autoComplete="email" placeholder="nome@email.com" required maxLength={255} /></FormField>
             <FormField label="Palavra-passe" htmlFor="login-password"><Input id="login-password" name="password" type="password" autoComplete="current-password" placeholder="A sua palavra-passe" required maxLength={72} /></FormField>
