@@ -587,7 +587,7 @@ function Marketplace() {
 
       <footer className="market-footer">
         <div className="market-shell market-footer-main"><a href="#inicio" className="market-logo market-footer-logo"><span className="market-logo-mark" aria-hidden="true"><ShoppingBag size={19} /></span><span>VILASHOP<span className="market-logo-period">.</span></span></a><p>Boas coisas circulam.</p><div className="market-footer-place"><MapPin size={15} /> Vilankulo, Moçambique</div></div>
-        <div className="market-shell market-footer-bottom"><span>© {new Date().getFullYear()} Boladas</span><span>Só para maiores de 18 anos</span><span className="market-adult-mark"><BadgeCheck size={14} /> Uma comunidade local</span></div>
+        <div className="market-shell market-footer-bottom"><span>© {new Date().getFullYear()} VilaShop</span><span>Só para maiores de 18 anos</span><span className="market-adult-mark"><BadgeCheck size={14} /> Uma comunidade local</span></div>
       </footer>
 
       <AuthDialogs
@@ -703,7 +703,7 @@ function AuthDialogs({
       <Dialog open={showRegister} onOpenChange={(open) => { if (!needsProfile) setShowRegister(open); }}>
         <DialogContent className="market-dialog-content market-register-dialog">
           {needsProfile ? (
-            <><DialogHeader className="market-form-header"><span className="market-form-kicker">Só falta um passo</span><DialogTitle>Complete o seu perfil</DialogTitle><DialogDescription>O Boladas é uma comunidade para pessoas com 18 anos ou mais. Os seus dados ficam privados.</DialogDescription></DialogHeader>
+            <><DialogHeader className="market-form-header"><span className="market-form-kicker">Só falta um passo</span><DialogTitle>Complete o seu perfil</DialogTitle><DialogDescription>O VilaShop é uma comunidade para pessoas com 18 anos ou mais. Os seus dados ficam privados.</DialogDescription></DialogHeader>
               <form className="market-form" onSubmit={(event) => void onCompleteProfile(event)}>
                 <FormField label="Nome" htmlFor="profile-name"><Input id="profile-name" name="name" autoComplete="name" defaultValue={currentUser?.user_metadata.full_name?.toString() ?? ""} required minLength={2} maxLength={100} /></FormField>
                 <FormField label="Telefone" htmlFor="profile-phone"><Input id="profile-phone" name="phone" type="tel" autoComplete="tel" placeholder="+258 …" required minLength={5} maxLength={30} /></FormField>
