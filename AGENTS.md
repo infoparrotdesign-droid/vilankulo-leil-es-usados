@@ -28,3 +28,6 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Project architecture
+- Keep listings public-read with database-enforced ownership and auction rules; keep profiles private and expose seller contact only through the authenticated contact function, so browsing stays open without revealing member details.
