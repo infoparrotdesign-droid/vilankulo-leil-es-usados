@@ -14,13 +14,125 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bids: {
+        Row: {
+          amount: number
+          bidder_id: string
+          created_at: string
+          id: string
+          listing_id: string
+        }
+        Insert: {
+          amount: number
+          bidder_id: string
+          created_at?: string
+          id?: string
+          listing_id: string
+        }
+        Update: {
+          amount?: number
+          bidder_id?: string
+          created_at?: string
+          id?: string
+          listing_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bids_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listings: {
+        Row: {
+          auction_ends_at: string | null
+          category: string
+          created_at: string
+          description: string
+          highest_bid: number | null
+          id: string
+          item_condition: string
+          listing_type: string
+          photo_path: string | null
+          price: number
+          seller_id: string
+          status: string
+          title: string
+        }
+        Insert: {
+          auction_ends_at?: string | null
+          category: string
+          created_at?: string
+          description: string
+          highest_bid?: number | null
+          id?: string
+          item_condition: string
+          listing_type: string
+          photo_path?: string | null
+          price: number
+          seller_id: string
+          status?: string
+          title: string
+        }
+        Update: {
+          auction_ends_at?: string | null
+          category?: string
+          created_at?: string
+          description?: string
+          highest_bid?: number | null
+          id?: string
+          item_condition?: string
+          listing_type?: string
+          photo_path?: string | null
+          price?: number
+          seller_id?: string
+          status?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          address: string
+          avatar_path: string | null
+          birth_date: string
+          created_at: string
+          display_name: string
+          id: string
+          phone: string
+        }
+        Insert: {
+          address: string
+          avatar_path?: string | null
+          birth_date: string
+          created_at?: string
+          display_name: string
+          id: string
+          phone: string
+        }
+        Update: {
+          address?: string
+          avatar_path?: string | null
+          birth_date?: string
+          created_at?: string
+          display_name?: string
+          id?: string
+          phone?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      place_bid: {
+        Args: { _amount: number; _listing_id: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
