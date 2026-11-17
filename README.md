@@ -1,8 +1,8 @@
-# Vilankulo Leilões & Usados
+# VilaShop
 
-OIe como vai tenho criar um site para boladas(expressao usada localmente em regiao de mocambique e concretamente em vilankulo) em Vilankulo, para leiloes, vender artigos usados as pessoas vao entrar para se registar atraves de dados de telefone email , morada, idade porque deve ser para maiores de 18 anos,
+O VilaShop é um marketplace orientado à comunidade, criado para aproximar compradores e vendedores em Moçambique.
 
-This project was built with [Lovable](https://lovable.dev).
+Este projecto é desenvolvido com [Lovable](https://lovable.dev).
 
 ## Build with Lovable
 

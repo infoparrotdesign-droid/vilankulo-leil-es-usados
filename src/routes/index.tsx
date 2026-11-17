@@ -34,7 +34,7 @@ import bicyclePhoto from "@/assets/used-bicycle.jpg";
 import phonePhoto from "@/assets/used-phone.jpg";
 import chairPhoto from "@/assets/wooden-chair.jpg";
 
-const APP_NAME = "Boladas";
+const APP_NAME = "VilaShop";
 const imageBucket = "boladas-media";
 const categories = ["Todos", "Eletrónicos", "Casa", "Moda", "Desporto", "Veículos", "Outros"] as const;
 type Category = (typeof categories)[number];
@@ -122,9 +122,9 @@ const listingSchema = z.object({
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Boladas — compra, venda e leilões em Vilankulo" },
+      { title: "VilaShop — comunidade de compra e venda em Moçambique" },
       { name: "description", content: "Descubra artigos usados à venda e leilões em Vilankulo. Publique, encontre e negocie artigos entre pessoas da comunidade." },
-      { property: "og:title", content: "Boladas — compra, venda e leilões em Vilankulo" },
+      { property: "og:title", content: "VilaShop — comunidade de compra e venda em Moçambique" },
       { property: "og:description", content: "O mercado local de artigos usados, com compra, venda e leilões em Vilankulo." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -173,7 +173,7 @@ function Marketplace() {
       } else {
         setProfileReady(false);
         setShowRegister(true);
-        toast.info("Complete os seus dados para utilizar o Boladas.");
+        toast.info("Complete os seus dados para utilizar o VilaShop.");
       }
     }
 
@@ -328,7 +328,7 @@ function Marketplace() {
     }
     setProfileReady(true);
     setShowRegister(false);
-    toast.success("Perfil pronto. Bem-vindo ao Boladas.");
+    toast.success("Perfil pronto. Bem-vindo ao VilaShop.");
   }
 
   async function signinWith(provider: "google" | "lovable") {
@@ -401,7 +401,7 @@ function Marketplace() {
     }
     setShowCreate(false);
     form.reset();
-    toast.success("Artigo publicado. Já aparece no Boladas.");
+    toast.success("Artigo publicado. Já aparece no VilaShop.");
     const { data: refreshed, error: refreshError } = await supabase
       .from("listings")
       .select("id, seller_id, title, description, category, item_condition, listing_type, price, highest_bid, photo_path")
@@ -474,17 +474,17 @@ function Marketplace() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <div className="market-topline"><MapPin size={15} aria-hidden="true" /> Feito para Vilankulo, Moçambique</div>
+      <div className="market-topline"><MapPin size={15} aria-hidden="true" /> Uma comunidade de compra e venda feita em Moçambique</div>
       <header className="market-header">
         <div className="market-shell market-header-content">
-          <a href="#inicio" className="market-logo" aria-label="Boladas — início">
+          <a href="#inicio" className="market-logo" aria-label="VilaShop — início">
             <span className="market-logo-mark" aria-hidden="true"><ShoppingBag size={21} /></span>
-            <span>BOLADAS<span className="market-logo-period">.</span></span>
+            <span>VILASHOP<span className="market-logo-period">.</span></span>
           </a>
           <nav className="market-primary-nav" aria-label="Navegação principal">
             <a href="#artigos">Explorar</a>
             <button type="button" onClick={() => { setActiveType("auction"); document.getElementById("artigos")?.scrollIntoView({ behavior: "smooth" }); }}>Leilões</button>
-            <button type="button" onClick={() => { setActiveType("all"); document.getElementById("artigos")?.scrollIntoView({ behavior: "smooth" }); }}>Como funciona</button>
+            <a href="#comunidade">Comunidade</a>
           </nav>
           <div className="market-header-actions">
             {sessionUser && profileReady ? (
@@ -508,8 +508,8 @@ function Marketplace() {
       <section id="inicio" className="market-intro">
         <div className="market-shell market-intro-inner">
           <div className="market-location-pill"><span className="market-status-dot" /> O mercado da nossa comunidade</div>
-          <h1>O que procuras<br className="market-mobile-break" /> está mais <span>perto.</span></h1>
-          <p>Compra, vende e participa em leilões. Bons artigos encontram novas histórias, aqui em Vilankulo.</p>
+          <h1>Descobre. Conecta-te.<br className="market-mobile-break" /> Compra e <span>vende.</span></h1>
+          <p>Um lugar para pessoas e lojas da nossa comunidade descobrirem oportunidades, partilharem artigos e fazerem bons negócios.</p>
           <div className="market-search-bar">
             <Search size={19} aria-hidden="true" />
             <Input
@@ -528,14 +528,14 @@ function Marketplace() {
 
       <section className="market-benefit-strip" aria-label="Benefícios">
         <div className="market-shell market-benefits-grid">
-          <div className="market-benefit"><span className="market-benefit-icon market-benefit-coral"><MapPin size={19} /></span><span><strong>Perto de casa</strong><small>Só em Vilankulo</small></span></div>
-          <div className="market-benefit"><span className="market-benefit-icon market-benefit-mint"><ShieldCheck size={20} /></span><span><strong>Mais confiança</strong><small>Pessoas da comunidade</small></span></div>
-          <div className="market-benefit"><span className="market-benefit-icon market-benefit-blue"><Gavel size={19} /></span><span><strong>Também há leilões</strong><small>Dê o seu melhor lance</small></span></div>
+          <div className="market-benefit"><span className="market-benefit-icon market-benefit-coral"><MapPin size={19} /></span><span><strong>Da nossa região</strong><small>Inhambane e arredores</small></span></div>
+          <div className="market-benefit"><span className="market-benefit-icon market-benefit-mint"><ShieldCheck size={20} /></span><span><strong>Pessoas e lojas</strong><small>Particulares e empresas</small></span></div>
+          <div className="market-benefit"><span className="market-benefit-icon market-benefit-blue"><Gavel size={19} /></span><span><strong>Várias oportunidades</strong><small>Venda directa e leilões</small></span></div>
         </div>
       </section>
 
       <section className="market-shell market-category-section" aria-labelledby="category-title">
-        <div className="market-section-heading"><div><span className="market-eyebrow">Encontre o que precisa</span><h2 id="category-title">Explore por categoria</h2></div><button type="button" className="market-see-all" onClick={() => { setActiveCategory("Todos"); document.getElementById("artigos")?.scrollIntoView({ behavior: "smooth" }); }}>Ver todos <ArrowRight size={15} /></button></div>
+        <div className="market-section-heading"><div><span className="market-eyebrow">Comece por descobrir</span><h2 id="category-title">O que procura hoje?</h2></div><button type="button" className="market-see-all" onClick={() => { setActiveCategory("Todos"); document.getElementById("artigos")?.scrollIntoView({ behavior: "smooth" }); }}>Ver todos <ArrowRight size={15} /></button></div>
         <div className="market-category-grid">
           {[
             { name: "Eletrónicos", caption: "Telemóveis, som e mais", icon: <Smartphone size={20} />, className: "market-category-coral" },
@@ -556,7 +556,7 @@ function Marketplace() {
 
       <section id="artigos" className="market-shell market-listings-section">
         <div className="market-section-heading market-listings-heading">
-          <div><span className="market-eyebrow"><span className="market-small-dot" /> À sua volta</span><h2>Artigos em destaque</h2><p>Escolhas de Vilankulo, à espera de novos donos.</p></div>
+          <div><span className="market-eyebrow"><span className="market-small-dot" /> À sua volta</span><h2>Novidades da comunidade</h2><p>Artigos publicados para encontrar novos donos em Inhambane.</p></div>
           <Button type="button" onClick={openCreateListing} className="market-outline-listing"><ImagePlus size={17} /> Publicar um artigo</Button>
         </div>
         <div className="market-filter-row">
@@ -578,16 +578,31 @@ function Marketplace() {
         {usesSamples && <p className="market-demo-note"><Sparkles size={15} /> Exemplos de como podem aparecer os primeiros anúncios.</p>}
       </section>
 
+      <section id="comunidade" className="market-community-section">
+        <div className="market-shell">
+          <div className="market-community-heading">
+            <span className="market-eyebrow">Mais do que comprar e vender</span>
+            <h2>O melhor do mercado é a comunidade.</h2>
+            <p>O VilaShop aproxima pessoas, pequenos negócios e boas oportunidades, começando pela Província de Inhambane.</p>
+          </div>
+          <div className="market-community-grid">
+            <article className="market-community-card"><span className="market-community-number">01</span><h3>Pessoas e lojas</h3><p>Descubra vendedores particulares e empresas da sua região.</p></article>
+            <article className="market-community-card"><span className="market-community-number">02</span><h3>Oportunidades para todos</h3><p>Encontre artigos à venda e acompanhe leilões com propostas transparentes.</p></article>
+            <article className="market-community-card"><span className="market-community-number">03</span><h3>Negócios com confiança</h3><p>Uma experiência construída com regras claras, apoio e responsabilidade.</p></article>
+          </div>
+        </div>
+      </section>
+
       <section className="market-seller-band">
         <div className="market-shell market-seller-inner">
-          <div className="market-seller-copy"><span className="market-seller-eyebrow">Tem algo para vender?</span><h2>Esse artigo merece<br /> um novo dono.</h2><p>Publique de graça e encontre alguém aqui na comunidade.</p><Button type="button" onClick={openCreateListing} className="market-seller-cta">Anunciar um artigo <ArrowRight size={17} /></Button></div>
+          <div className="market-seller-copy"><span className="market-seller-eyebrow">Tem algo para vender?</span><h2>Esse artigo merece<br /> um novo dono.</h2><p>Partilhe o que já não precisa e descubra quem procura exactamente isso.</p><Button type="button" onClick={openCreateListing} className="market-seller-cta">Anunciar um artigo <ArrowRight size={17} /></Button></div>
           <div className="market-seller-illustration" aria-hidden="true"><span className="market-seller-orbit market-seller-orbit-one" /><span className="market-seller-orbit market-seller-orbit-two" /><span className="market-seller-box"><Package size={64} strokeWidth={1.3} /></span><span className="market-seller-sticker"><Check size={20} /></span><span className="market-seller-stars"><Sparkles size={23} /></span></div>
         </div>
       </section>
 
       <footer className="market-footer">
-        <div className="market-shell market-footer-main"><a href="#inicio" className="market-logo market-footer-logo"><span className="market-logo-mark" aria-hidden="true"><ShoppingBag size={19} /></span><span>BOLADAS<span className="market-logo-period">.</span></span></a><p>Boas coisas circulam.</p><div className="market-footer-place"><MapPin size={15} /> Vilankulo, Moçambique</div></div>
-        <div className="market-shell market-footer-bottom"><span>© {new Date().getFullYear()} Boladas</span><span>Só para maiores de 18 anos</span><span className="market-adult-mark"><BadgeCheck size={14} /> Uma comunidade local</span></div>
+        <div className="market-shell market-footer-main"><a href="#inicio" className="market-logo market-footer-logo"><span className="market-logo-mark" aria-hidden="true"><ShoppingBag size={19} /></span><span>VILASHOP<span className="market-logo-period">.</span></span></a><p>Descobre. Conecta-te. Compra e vende.</p><div className="market-footer-place"><MapPin size={15} /> Província de Inhambane, Moçambique</div></div>
+        <div className="market-shell market-footer-bottom"><span>© {new Date().getFullYear()} VilaShop</span><span>Só para maiores de 18 anos</span><span className="market-adult-mark"><BadgeCheck size={14} /> Uma comunidade para maiores de 18 anos</span></div>
       </footer>
 
       <AuthDialogs
@@ -688,7 +703,7 @@ function AuthDialogs({
     <>
       <Dialog open={showLogin} onOpenChange={setShowLogin}>
         <DialogContent className="market-dialog-content">
-          <DialogHeader className="market-form-header"><span className="market-form-kicker">Que bom ver-te</span><DialogTitle>Entre no Boladas</DialogTitle><DialogDescription>A sua conta aproxima-o da comunidade de Vilankulo.</DialogDescription></DialogHeader>
+          <DialogHeader className="market-form-header"><span className="market-form-kicker">Que bom ver-te</span><DialogTitle>Entre no VilaShop</DialogTitle><DialogDescription>A sua conta aproxima-o da comunidade de Vilankulo.</DialogDescription></DialogHeader>
           <form className="market-form" onSubmit={(event) => void onLogin(event)}>
             <FormField label="Email" htmlFor="login-email"><Input id="login-email" name="email" type="email" autoComplete="email" placeholder="nome@email.com" required maxLength={255} /></FormField>
             <FormField label="Palavra-passe" htmlFor="login-password"><Input id="login-password" name="password" type="password" autoComplete="current-password" placeholder="A sua palavra-passe" required maxLength={72} /></FormField>
@@ -703,7 +718,7 @@ function AuthDialogs({
       <Dialog open={showRegister} onOpenChange={(open) => { if (!needsProfile) setShowRegister(open); }}>
         <DialogContent className="market-dialog-content market-register-dialog">
           {needsProfile ? (
-            <><DialogHeader className="market-form-header"><span className="market-form-kicker">Só falta um passo</span><DialogTitle>Complete o seu perfil</DialogTitle><DialogDescription>O Boladas é uma comunidade para pessoas com 18 anos ou mais. Os seus dados ficam privados.</DialogDescription></DialogHeader>
+            <><DialogHeader className="market-form-header"><span className="market-form-kicker">Só falta um passo</span><DialogTitle>Complete o seu perfil</DialogTitle><DialogDescription>O VilaShop é uma comunidade para pessoas com 18 anos ou mais. Os seus dados ficam privados.</DialogDescription></DialogHeader>
               <form className="market-form" onSubmit={(event) => void onCompleteProfile(event)}>
                 <FormField label="Nome" htmlFor="profile-name"><Input id="profile-name" name="name" autoComplete="name" defaultValue={currentUser?.user_metadata.full_name?.toString() ?? ""} required minLength={2} maxLength={100} /></FormField>
                 <FormField label="Telefone" htmlFor="profile-phone"><Input id="profile-phone" name="phone" type="tel" autoComplete="tel" placeholder="+258 …" required minLength={5} maxLength={30} /></FormField>
