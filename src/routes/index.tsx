@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import type { User } from "@supabase/supabase-js";
 import {
   ArrowDownUp,
@@ -40,7 +40,7 @@ const categories = ["Todos", "Eletrónicos", "Casa", "Moda", "Desporto", "Veícu
 type Category = (typeof categories)[number];
 type ListingType = "sale" | "auction";
 
-type Listing = {
+type SellerListing = {\n  id: string;\n  title: string;\n  status: string;\n  submitted_at: string | null;\n  publish_after: string | null;\n  review_note: string | null;\n};\n\ntype Listing = {
   id: string;
   seller_id: string;
   title: string;
@@ -142,7 +142,7 @@ function Marketplace() {
   const router = useRouter();
   const [sessionUser, setSessionUser] = useState<User | null>(null);
   const [profileReady, setProfileReady] = useState(false);
-  const [liveListings, setLiveListings] = useState<Listing[]>([]);
+  const [liveListings, setLiveListings] = useState<Listing[]>([]);\n  const [myListings, setMyListings] = useState<SellerListing[]>([]);\n  const [showMyListings, setShowMyListings] = useState(false);
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<Category>("Todos");
   const [activeType, setActiveType] = useState<"all" | ListingType>("all");
@@ -219,6 +219,29 @@ function Marketplace() {
       current = false;
     };
   }, []);
+
+  useEffect(() => {
+    let current = true;
+    if (!sessionUser) {
+      setMyListings([]);
+      return;
+    }
+    void supabase
+      .from("listings")
+      .select("id, title, status, submitted_at, publish_after, review_note")
+      .eq("seller_id", sessionUser.id)
+      .order("submitted_at", { ascending: false })
+      .limit(30)
+      .then(({ data, error }) => {
+        if (!current) return;
+        if (error) {
+          console.error("Could not load seller listings", error);
+          return;
+        }
+        setMyListings(data ?? []);
+      });
+    return () => { current = false; };
+  }, [sessionUser?.id]);
 
   const visibleListings = useMemo(() => {
     const items = liveListings.length > 0 ? liveListings : sampleItems;
@@ -382,7 +405,7 @@ function Marketplace() {
     const auctionEndsAt = parsed.data.listingType === "auction"
       ? new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
       : null;
-    const { error } = await supabase.from("listings").insert({
+    const { data: submitted, error } = await supabase.from("listings").insert({
       seller_id: sessionUser.id,
       title: parsed.data.title,
       description: parsed.data.description,
@@ -401,7 +424,7 @@ function Marketplace() {
     }
     setShowCreate(false);
     form.reset();
-    toast.success("Artigo publicado. Já aparece no VilaShop.");
+    if (submitted) setMyListings((current) => [submitted, ...current.filter((item) => item.id !== submitted.id)]);\n    toast.success("Anúncio enviado para observação. Será publicado automaticamente após 6 horas, salvo intervenção da administração.");
     const { data: refreshed, error: refreshError } = await supabase
       .from("listings")
       .select("id, seller_id, title, description, category, item_condition, listing_type, price, highest_bid, photo_path")
@@ -489,7 +512,7 @@ function Marketplace() {
           <div className="market-header-actions">
             {sessionUser && profileReady ? (
               <>
-                <Button type="button" variant="ghost" className="market-account" onClick={() => void signOut()} aria-label="Sair da conta">
+                <Button type="button" variant="ghost" className="market-account" onClick={() => setShowMyListings(true)}>Os meus anúncios</Button>\n                {sessionUser.email?.toLowerCase() === "adminvilashop@gmail.com" && <Link to="/admin" className="market-account">Administração</Link>}\n                <Button type="button" variant="ghost" className="market-account" onClick={() => void signOut()} aria-label="Sair da conta">
                   <UserRound size={17} /> <span>{sessionUser.user_metadata.full_name?.toString().split(" ")[0] || "A minha conta"}</span>
                 </Button>
                 <Button type="button" onClick={openCreateListing} className="market-list-button"><ImagePlus size={16} /> Anunciar</Button>
@@ -618,6 +641,28 @@ function Marketplace() {
         onSocial={signinWith}
         adultCutoff={getAdultCutoff()}
       />
+
+      <Dialog open={showMyListings} onOpenChange={setShowMyListings}>
+        <DialogContent className="market-dialog-content">
+          <DialogHeader className="market-form-header">
+            <span className="market-form-kicker">A sua actividade</span>
+            <DialogTitle>Os meus anúncios</DialogTitle>
+            <DialogDescription>Os novos anúncios ficam em observação durante pelo menos 6 horas. Se não forem rejeitados ou suspensos, são publicados automaticamente.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {myListings.length === 0 ? <p className="text-sm text-muted-foreground">Ainda não tem anúncios publicados ou em observação.</p> : myListings.map((item) => (
+              <div key={item.id} className="rounded-xl border p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <strong>{item.title}</strong>
+                  <span className="rounded-full bg-muted px-2 py-1 text-xs font-medium">{listingStatusLabel(item.status)}</span>
+                </div>
+                {item.status === "pending_review" && item.publish_after && <p className="mt-2 text-sm text-muted-foreground">Previsão de publicação: {new Date(item.publish_after).toLocaleString("pt-MZ")}</p>}
+                {item.review_note && <p className="mt-2 text-sm text-destructive">Nota da administração: {item.review_note}</p>}
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent className="market-dialog-content">
@@ -755,6 +800,19 @@ function FormField({ label, htmlFor, children }: { label: string; htmlFor: strin
 
 function GoogleMark() {
   return <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18"><path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/></svg>;
+}
+
+function listingStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    pending_review: "Em observação",
+    active: "Publicado",
+    sold: "Vendido",
+    withdrawn: "Retirado",
+    ended: "Terminado",
+    rejected: "Rejeitado",
+    suspended: "Suspenso",
+  };
+  return labels[status] ?? status;
 }
 
 function formatPrice(price: number): string {
