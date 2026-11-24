@@ -221,10 +221,15 @@ function Marketplace() {
   const [sortBy, setSortBy] = useState<"recent" | "price">("recent");
   const [busy, setBusy] = useState(false);
   const [draftPrice, setDraftPrice] = useState("");
+  const [targetSellerNet, setTargetSellerNet] = useState("");
   const draftListingPrice = Number(draftPrice);
   const draftCommission = Number.isFinite(draftListingPrice) && draftListingPrice > 0 ? Math.round(draftListingPrice * 0.1 * 100) / 100 : 0;
   const draftSellerNet = draftListingPrice - draftCommission;
   const draftBuyerTotal = Number.isFinite(draftListingPrice) && draftListingPrice > 0 ? draftListingPrice : 0;
+  const targetNetValue = Number(targetSellerNet);
+  const suggestedListingPrice = Number.isFinite(targetNetValue) && targetNetValue > 0
+    ? Math.ceil((targetNetValue / 0.9) * 100) / 100
+    : 0;
   const [isFavorite, setIsFavorite] = useState(false);
   const [isFollowingSeller, setIsFollowingSeller] = useState(false);
   const [publicBidHistory, setPublicBidHistory] = useState<PublicBid[]>([]);
@@ -893,8 +898,17 @@ function Marketplace() {
               <FormField label="Estado" htmlFor="listing-condition"><select id="listing-condition" name="itemCondition" className="market-form-select" defaultValue="Bom estado"><option>Como novo</option><option>Bom estado</option><option>Usado</option></select></FormField>
               <FormField label="Preço do artigo (MZN)" htmlFor="listing-price"><Input id="listing-price" type="number" name="price" placeholder="Ex.: 5 000" required min="1" step="0.01" value={draftPrice} onChange={(event) => setDraftPrice(event.target.value)} /></FormField>
             </div>
-            <div className="market-private-note" role="note"><ShieldCheck size={16} /><span><strong>Taxa transparente:</strong> defina o preço pelo qual pretende vender. O comprador paga exactamente o preço anunciado; o VilaShop retém 10% desse valor como taxa de serviço e transfere 90% para si após a venda ser concluída. Exemplo: artigo a 5.000 MT → taxa de 500 MT → recebe 4.500 MT. Tenha a taxa em conta ao definir o preço.</span></div>
-            {draftBuyerTotal > 0 && <div className="rounded-xl border border-border bg-card p-3 text-sm"><p className="flex justify-between gap-3"><span>Preço pago pelo comprador</span><strong>{formatPrice(draftBuyerTotal)}</strong></p><p className="mt-1 flex justify-between gap-3 text-muted-foreground"><span>Taxa VilaShop (10%, descontada)</span><span>{formatPrice(draftCommission)}</span></p><p className="mt-2 flex justify-between gap-3 border-t pt-2 text-base"><strong>Você recebe (90%)</strong><strong>{formatPrice(draftSellerNet)}</strong></p></div>}
+            <div className="market-private-note" role="note"><ShieldCheck size={16} /><span><strong>Comissão clara, sem surpresas:</strong> o preço que definir é o valor pago pelo comprador. Quando a venda for concluída, o VilaShop retém 10% e entrega-lhe 90%. Compare preços de artigos semelhantes antes de publicar para manter a sua oferta competitiva.</span></div>
+            <div className="rounded-xl border border-border bg-card p-3">
+              <p className="text-sm font-semibold">Quer receber um valor específico?</p>
+              <p className="mt-1 text-xs text-muted-foreground">Indique quanto pretende receber já depois da comissão. Calculamos o preço de anúncio necessário — depois compare-o com o mercado antes de o aplicar.</p>
+              <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                <Input aria-label="Valor líquido que pretende receber" type="number" min="1" step="0.01" placeholder="Ex.: 5 000 MT líquidos" value={targetSellerNet} onChange={(event) => setTargetSellerNet(event.target.value)} />
+                <Button type="button" variant="outline" disabled={suggestedListingPrice <= 0} onClick={() => setDraftPrice(suggestedListingPrice.toFixed(2))}>Usar preço sugerido</Button>
+              </div>
+              {suggestedListingPrice > 0 && <p className="mt-2 text-sm">Para receber <strong>{formatPrice(targetNetValue)}</strong>, anuncie por aproximadamente <strong>{formatPrice(suggestedListingPrice)}</strong>.</p>}
+            </div>
+            {draftBuyerTotal > 0 && <div className="rounded-xl border border-border bg-card p-3 text-sm"><p className="mb-2 font-semibold">Resumo da sua venda</p><p className="flex justify-between gap-3"><span>Comprador paga</span><strong>{formatPrice(draftBuyerTotal)}</strong></p><p className="mt-1 flex justify-between gap-3 text-muted-foreground"><span>Comissão VilaShop (10%)</span><span>− {formatPrice(draftCommission)}</span></p><p className="mt-2 flex justify-between gap-3 border-t pt-2 text-base"><strong>Você recebe (90%)</strong><strong>{formatPrice(draftSellerNet)}</strong></p><p className="mt-2 text-xs text-muted-foreground">A comissão só é retida numa venda concluída. Não é cobrada para publicar o anúncio.</p></div>}
             <fieldset className="market-listing-type"><legend>Como quer vender?</legend><label className="market-radio-line"><input type="radio" name="listingType" value="sale" defaultChecked /><span><strong>Venda directa</strong><small>Defina o preço final.</small></span></label><label className="market-radio-line"><input type="radio" name="listingType" value="negotiation" /><span><strong>Negociação</strong><small>Receba propostas e envie contrapropostas.</small></span></label><label className="market-radio-line"><input type="radio" name="listingType" value="auction" /><span><strong>Leilão</strong><small>Receba lances durante 3 dias.</small></span><Gavel size={17} /></label></fieldset>
             <FormField label="Foto do artigo" htmlFor="listing-photo"><div className="market-upload-line"><ImagePlus size={18} /><span>Uma foto clara ajuda o artigo a destacar-se.</span></div><Input id="listing-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required aria-label="Escolher foto do artigo" /></FormField>
             <div className="market-private-note"><ShieldCheck size={16} /><span>Use fotos suas. O seu endereço e telefone não ficam visíveis no anúncio.</span></div>
