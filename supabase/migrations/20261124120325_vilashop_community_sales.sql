@@ -10,7 +10,7 @@ alter table public.profiles
 
 create or replace function public.create_profile_for_new_user()
 returns trigger language plpgsql security definer set search_path = public
-as $
+as $$
 declare
   supplied_birth_date date;
   supplied_name text;
@@ -286,18 +286,34 @@ grant execute on function public.accept_listing_counteroffer(uuid) to authentica
 -- Automatically close auctions when their published deadline is reached.
 create or replace function public.end_due_vilashop_auctions()
 returns integer language plpgsql set search_path = ''
-as $
+as $$
 declare ended_count integer;
 begin
-  update public.listings set status='ended'
-  where status='active' and listing_type='auction' and auction_ends_at <= now();
-  get diagnostics ended_count = row_count;
+  with ended as (
+    update public.listings set status='ended'
+    where status='active' and listing_type='auction' and auction_ends_at <= now()
+    returning id,title,seller_id
+  ), notified as (
+    insert into public.notifications(recipient_id,actor_id,kind,title,body,entity_type,entity_id)
+    select winner.bidder_id,ended.seller_id,'sale_update','Leilão encerrado',
+      'Parabéns! O seu lance venceu o leilão "' || ended.title || '". Pode acompanhar a compra na sua área de comunidade.',
+      'listing',ended.id
+    from ended
+    join lateral (
+      select b.bidder_id from public.bids b
+      where b.listing_id=ended.id
+      order by b.amount desc,b.created_at asc
+      limit 1
+    ) winner on true
+    returning 1
+  )
+  select count(*) into ended_count from ended;
   return ended_count;
 end;
-$;
+$$;
 revoke all on function public.end_due_vilashop_auctions() from public, anon, authenticated;
 grant execute on function public.end_due_vilashop_auctions() to service_role;
-do $
+do $$
 begin
   if not exists (select 1 from cron.job where jobname='vilashop-end-due-auctions') then
     perform cron.schedule('vilashop-end-due-auctions','* * * * *','select public.end_due_vilashop_auctions();');
@@ -655,7 +671,7 @@ grant update (seller_kind) on public.profiles to authenticated;
 
 create or replace function public.admin_review_listing_report(_report_id uuid,_decision text,_note text)
 returns public.listing_reports language plpgsql security definer set search_path = ''
-as $
+as $$
 declare result_row public.listing_reports; uid uuid:=auth.uid();
 begin
   if uid is null or not public.is_vilashop_admin() then raise exception 'Apenas a equipa VilaShop pode rever denúncias.'; end if;
