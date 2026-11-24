@@ -1,4 +1,4 @@
-name: VilaShop - Deploy Supabase migrations
+name: VilaShop - Test direct PostgreSQL and deploy migrations
 
 on:
   push:
@@ -9,6 +9,12 @@ on:
       - "supabase/config.toml"
       - ".github/workflows/vilashop-supabase-migrations.yml"
   workflow_dispatch:
+    inputs:
+      apply_migrations:
+        description: "Aplicar migrations depois de o teste directo passar"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -19,7 +25,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: Apply database migrations
+    name: Test direct PostgreSQL connection
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 15
@@ -43,17 +49,19 @@ jobs:
         with:
           version: 3.3.0
 
-      - name: Confirm target project
+      - name: Link using direct PostgreSQL endpoint (bypass pooler)
         shell: bash
         run: |
-          test "$(sed -n 's/^project_id = "\(.*\)"/\1/p' supabase/config.toml)" = "$SUPABASE_PROJECT_ID"
-          supabase link --project-ref "$SUPABASE_PROJECT_ID"
+          test "$(sed -n 's/^project_id = "\\(.*\\)"/\\1/p' supabase/config.toml)" = "$SUPABASE_PROJECT_ID"
+          supabase link --project-ref "$SUPABASE_PROJECT_ID" --skip-pooler
 
-      - name: Preview pending migrations
+      - name: Preview pending migrations over direct connection only
         run: supabase db push --dry-run --remote="$SUPABASE_PROJECT_ID"
 
-      - name: Apply pending migrations
+      - name: Apply pending migrations only when explicitly requested
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.apply_migrations == true }}
         run: supabase db push --yes --remote="$SUPABASE_PROJECT_ID"
 
       - name: Verify remote migration history
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.apply_migrations == true }}
         run: supabase migration list --remote="$SUPABASE_PROJECT_ID"
