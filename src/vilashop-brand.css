@@ -104,14 +104,14 @@
 .market-search-submit,
 .market-seller-cta {
   background: var(--market-coral);
-  color: #fffaf4;
+  color: oklch(0.99 0.008 75);
 }
 .market-list-button:hover,
 .market-register-button:hover,
 .market-search-submit:hover,
 .market-seller-cta:hover {
   background: oklch(0.5256 0.1377 43.54);
-  color: #fffaf4;
+  color: oklch(0.99 0.008 75);
 }
 .market-form-submit {
   background: var(--market-forest);
