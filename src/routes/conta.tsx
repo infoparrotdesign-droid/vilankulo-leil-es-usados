@@ -183,7 +183,7 @@ function AccountPage() {
         <Section icon={<Heart />} title="Artigos guardados" count={favorites.length}>
           {favorites.length === 0 ? <Empty>Os artigos que guardar vão aparecer aqui.</Empty> : favorites.map((item) => (
             <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border bg-card p-4">
-              <div><p className="font-semibold">{item.listings?.title ?? "Anúncio guardado"}</p><p className="text-sm text-muted-foreground">{item.listings ? `${item.listings.price.toLocaleString("pt-MZ")} MT · ${item.listings.status}` : item.listing_id}</p></div>
+              <div><p className="font-semibold">{item.listings?.title ?? "Anúncio guardado"}</p><p className="text-sm text-muted-foreground">{item.listings ? `${(item.listings.price * 1.1).toLocaleString("pt-MZ", { maximumFractionDigits: 2 })} MT · total estimado com taxa VilaShop · ${item.listings.status}` : item.listing_id}</p></div>
               <Button size="sm" variant="outline" onClick={() => void removeFavorite(item.id)}>Remover</Button>
             </div>
           ))}
