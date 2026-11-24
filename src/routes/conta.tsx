@@ -183,7 +183,7 @@ function AccountPage() {
         <Section icon={<Heart />} title="Artigos guardados" count={favorites.length}>
           {favorites.length === 0 ? <Empty>Os artigos que guardar vão aparecer aqui.</Empty> : favorites.map((item) => (
             <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border bg-card p-4">
-              <div><p className="font-semibold">{item.listings?.title ?? "Anúncio guardado"}</p><p className="text-sm text-muted-foreground">{item.listings ? `${(item.listings.price * 1.1).toLocaleString("pt-MZ", { maximumFractionDigits: 2 })} MT · total estimado com taxa VilaShop · ${item.listings.status}` : item.listing_id}</p></div>
+              <div><p className="font-semibold">{item.listings?.title ?? "Anúncio guardado"}</p><p className="text-sm text-muted-foreground">{item.listings ? `${item.listings.price.toLocaleString("pt-MZ", { maximumFractionDigits: 2 })} MT · preço anunciado · ${item.listings.status}` : item.listing_id}</p></div>
               <Button size="sm" variant="outline" onClick={() => void removeFavorite(item.id)}>Remover</Button>
             </div>
           ))}
@@ -218,9 +218,9 @@ function AccountPage() {
               </div>
               <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
                 <p>Valor do artigo: <strong>{sale.agreed_price.toLocaleString("pt-MZ")} MT</strong></p>
-                <p>Taxa VilaShop (10%): <strong>{sale.commission_amount.toLocaleString("pt-MZ")} MT</strong></p>
+                <p>Taxa VilaShop (10%, descontada ao vendedor): <strong>{sale.commission_amount.toLocaleString("pt-MZ")} MT</strong></p>
                 <p>Total pago pelo comprador: <strong>{sale.buyer_total_amount.toLocaleString("pt-MZ")} MT</strong></p>
-                <p>Vendedor recebe: <strong>{sale.seller_net_amount.toLocaleString("pt-MZ")} MT</strong></p>
+                <p>Vendedor recebe (90%): <strong>{sale.seller_net_amount.toLocaleString("pt-MZ")} MT</strong></p>
               </div>
               {sale.status === "awaiting_payment" && sale.buyer_id === userId && (
                 <form className="mt-4 grid gap-3 rounded-lg bg-muted/60 p-3 sm:grid-cols-3" onSubmit={(event) => void reportPayment(event, sale.id)}>
