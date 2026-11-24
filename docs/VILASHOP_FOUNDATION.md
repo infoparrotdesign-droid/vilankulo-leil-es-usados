@@ -69,9 +69,11 @@ O VilaShop é um marketplace moçambicano orientado à comunidade. Deve aproxima
 
 ## 4. Direcção visual
 
-- Linha visual: azul moderno.
+- Identidade aprovada para implementação: laranja queimado, carvão esverdeado, creme quente e verde profundo.
+- Laranja principal: #D95716; carvão: #202B29; creme: #FFF5E9; verde: #28665A; dourado de apoio: #E8B85C; branco: #FFFFFF.
+- O laranja é a cor de acção e reconhecimento da marca; o carvão estrutura navegação e áreas de destaque; o creme mantém a experiência acolhedora; o verde é reservado a confiança e estados positivos.
+- Evitar a aparência genérica baseada em azuis/roxos e gradientes decorativos.
 - Suporte a tema automático do dispositivo e escolha manual, com preferência manual persistente.
-- Paleta exacta ainda deve ser validada; evitar fixar códigos provisórios como definitivos.
 - Interface clara, acessível, responsiva e em português usado em Moçambique.
 - Toda a marca visível deve usar VilaShop, não o nome antigo Boladas.
 
