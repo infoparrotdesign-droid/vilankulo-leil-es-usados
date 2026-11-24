@@ -8,6 +8,7 @@ on:
       - "supabase/migrations/**"
       - "supabase/config.toml"
       - "supabase/functions/cleanup-listing-photos/**"
+      - "supabase/functions/send-admin-notification/**"
       - ".github/workflows/vilashop-supabase-migrations.yml"
   schedule:
     - cron: "17 * * * *"
@@ -20,6 +21,11 @@ on:
         default: false
       run_photo_cleanup:
         description: "Executar a limpeza de fotografias que já passaram 72 horas"
+        required: true
+        type: boolean
+        default: false
+      configure_gmail:
+        description: "Publicar credenciais OAuth Gmail guardadas nos GitHub Secrets"
         required: true
         type: boolean
         default: false
@@ -86,6 +92,29 @@ jobs:
             --header "Content-Type: application/json" \
             --data '{}' \
             "https://ibwasunbdqplanwhnexf.supabase.co/functions/v1/cleanup-listing-photos"
+
+
+      - name: Deploy protected Gmail notification function
+        if: ${{ github.event_name == 'push' }}
+        run: supabase functions deploy send-admin-notification --project-ref "$SUPABASE_PROJECT_ID" --yes
+
+      - name: Configure Gmail OAuth secrets from GitHub environment
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.configure_gmail == true }}
+        shell: bash
+        env:
+          GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
+          GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
+        run: |
+          test -n "$GMAIL_CLIENT_ID" || { echo "::error::Missing production secret GMAIL_CLIENT_ID"; exit 1; }
+          test -n "$GMAIL_CLIENT_SECRET" || { echo "::error::Missing production secret GMAIL_CLIENT_SECRET"; exit 1; }
+          test -n "$GMAIL_REFRESH_TOKEN" || { echo "::error::Missing production secret GMAIL_REFRESH_TOKEN"; exit 1; }
+          MAILER_TOKEN="$(printf 'vilashop-mailer:%s' "$SUPABASE_ACCESS_TOKEN" | sha256sum | cut -d' ' -f1)"
+          supabase secrets set --yes --project-ref "$SUPABASE_PROJECT_ID" \\
+            "GMAIL_CLIENT_ID=$GMAIL_CLIENT_ID" \\
+            "GMAIL_CLIENT_SECRET=$GMAIL_CLIENT_SECRET" \\
+            "GMAIL_REFRESH_TOKEN=$GMAIL_REFRESH_TOKEN" \\
+            "VILASHOP_MAILER_TOKEN=$MAILER_TOKEN"
 
       - name: Apply pending migrations only when explicitly requested
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.apply_migrations == true }}
