@@ -6,6 +6,8 @@ on:
       - vilashop/rebuild-foundation
     paths:
       - "src/**"
+      - ".env"
+      - ".env.example"
       - "package.json"
       - "bun.lock"
       - "vite.config.ts"
