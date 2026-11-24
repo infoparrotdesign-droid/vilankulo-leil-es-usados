@@ -71,35 +71,42 @@ function AdminPage() {
     setDisputes(disputeResult.data ?? []);
   }, []);
 
-  const verifyAdmin = useCallback(async () => {
+  const verifyAdmin = useCallback(async (): Promise<boolean> => {
     setChecking(true);
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError || !userData.user) {
-      setSignedInEmail(null);
+    try {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) {
+        setSignedInEmail(null);
+        setIsAdmin(false);
+        setListings([]); setReports([]); setSales([]); setDisputes([]);
+        return false;
+      }
+
+      setSignedInEmail(userData.user.email ?? null);
+      if (!isVilaShopAdminEmail(userData.user.email)) {
+        setIsAdmin(false);
+        setListings([]); setReports([]); setSales([]); setDisputes([]);
+        return false;
+      }
+
+      const { data, error } = await adminDatabase.rpc("is_vilashop_admin");
+      if (error || data !== true) {
+        setIsAdmin(false);
+        setListings([]); setReports([]); setSales([]); setDisputes([]);
+        return false;
+      }
+
+      setIsAdmin(true);
+      await loadQueue();
+      return true;
+    } catch (error) {
+      console.error("Falha ao validar permissões administrativas.", error);
       setIsAdmin(false);
       setListings([]); setReports([]); setSales([]); setDisputes([]);
+      return false;
+    } finally {
       setChecking(false);
-      return;
     }
-
-    setSignedInEmail(userData.user.email ?? null);
-    if (!isVilaShopAdminEmail(userData.user.email)) {
-      setIsAdmin(false);
-      setListings([]); setReports([]); setSales([]); setDisputes([]);
-      setChecking(false);
-      return;
-    }
-    const { data, error } = await adminDatabase.rpc("is_vilashop_admin");
-    if (error || data !== true) {
-      setIsAdmin(false);
-      setListings([]);
-      setChecking(false);
-      return;
-    }
-
-    setIsAdmin(true);
-    await loadQueue();
-    setChecking(false);
   }, [loadQueue]);
 
   useEffect(() => {
@@ -113,14 +120,18 @@ function AdminPage() {
       return;
     }
     setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
     setBusy(false);
     if (error) {
       toast.error("Não foi possível entrar. Confirme o email e a palavra-passe.");
       return;
     }
-    await verifyAdmin();
-    toast.success("Sessão iniciada.");
+    const authorised = await verifyAdmin();
+    if (authorised) {
+      toast.success("Acesso administrativo confirmado.");
+    } else {
+      toast.error("A sessão foi iniciada, mas esta conta ainda não tem autorização administrativa. Confirme o email e a atribuição do perfil de administrador.");
+    }
   }
 
   async function signOut() {
