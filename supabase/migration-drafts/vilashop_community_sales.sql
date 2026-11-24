@@ -62,7 +62,9 @@ create table if not exists public.notifications (
 );
 create index if not exists notifications_inbox_idx on public.notifications(recipient_id, created_at desc);
 alter table public.notifications enable row level security;
-grant select, update on public.notifications to authenticated;
+grant select on public.notifications to authenticated;
+revoke update on public.notifications from authenticated;
+grant update (read_at) on public.notifications to authenticated;
 create policy notifications_read_own on public.notifications for select to authenticated
   using (recipient_id = (select auth.uid()));
 create policy notifications_update_own on public.notifications for update to authenticated
@@ -352,7 +354,9 @@ begin
   end if;
   if _delivery_method not in ('in_person','seller_delivery') then raise exception 'Método de entrega inválido.'; end if;
   select * into l from public.listings where id=_listing_id for update;
-  if not found or l.status not in ('active','ended') then raise exception 'Este anúncio já não está disponível.'; end if;
+  if not found or (l.listing_type='sale' and l.status<>'active') or (l.listing_type='auction' and l.status<>'ended') then
+    raise exception 'Este anúncio já não está disponível.';
+  end if;
   if l.seller_id=uid then raise exception 'Não pode comprar o seu próprio artigo.'; end if;
 
   if l.listing_type='auction' then
@@ -543,7 +547,8 @@ begin
     update public.marketplace_sales set status='buyer_confirmed',updated_at=now() where id=result_row.sale_id and status='disputed';
   else
     update public.marketplace_sales set status='cancelled',updated_at=now() where id=result_row.sale_id and status='disputed';
-    update public.listings set status='active' where id=(select s.listing_id from public.marketplace_sales s where s.id=result_row.sale_id);
+    update public.listings set status='suspended', review_note='Venda em reclamação resolvida a favor do comprador; requer revisão administrativa antes de voltar a publicar.'
+    where id=(select s.listing_id from public.marketplace_sales s where s.id=result_row.sale_id);
   end if;
   return result_row;
 end;
@@ -563,6 +568,7 @@ as $$
 $$;
 revoke all on function public.get_public_seller_profile(uuid) from public;
 grant execute on function public.get_public_seller_profile(uuid) to anon, authenticated;
+grant update (seller_kind) on public.profiles to authenticated;
 
 -- Admins can read and process reports and disputes; participants retain read access.
 create policy listing_reports_admin_read on public.listing_reports for select to authenticated
