@@ -1036,5 +1036,5 @@ function listingStatusLabel(status: string): string {
 }
 
 function formatPrice(price: number): string {
-  return `${new Intl.NumberFormat("pt-MZ", { maximumFractionDigits: 0 }).format(price)} MT`;
+  return `${new Intl.NumberFormat("pt-MZ", { maximumFractionDigits: 2 }).format(price)} MT`;
 }
