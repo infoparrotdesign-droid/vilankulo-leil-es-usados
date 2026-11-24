@@ -166,6 +166,7 @@ const signupSchema = z.object({
   phone: z.string().trim().min(5, "Indique um telefone válido.").max(30),
   address: z.string().trim().min(2, "Indique a sua morada.").max(300),
   birthDate: z.string().refine((value) => isAdultDateOfBirth(value), "É necessário ter 18 anos ou mais."),
+  sellerKind: z.enum(["individual", "business"]),
   password: z.string().min(8, "A palavra-passe deve ter pelo menos 8 caracteres.").max(72),
 });
 
@@ -366,6 +367,7 @@ function Marketplace() {
       phone: formData.get("phone"),
       address: formData.get("address"),
       birthDate: formData.get("birthDate"),
+      sellerKind: formData.get("sellerKind"),
       password: formData.get("password"),
     });
     if (!parsed.success) {
@@ -383,6 +385,7 @@ function Marketplace() {
           phone: parsed.data.phone,
           address: parsed.data.address,
           birth_date: parsed.data.birthDate,
+          seller_kind: parsed.data.sellerKind,
         },
       },
     });
@@ -428,17 +431,19 @@ function Marketplace() {
     const phone = z.string().trim().min(5).max(30).safeParse(formData.get("phone"));
     const address = z.string().trim().min(2).max(300).safeParse(formData.get("address"));
     const birthDate = z.string().refine((value) => isAdultDateOfBirth(value)).safeParse(formData.get("birthDate"));
-    if (!name.success || !phone.success || !address.success || !birthDate.success) {
+    const sellerKind = z.enum(["individual", "business"]).safeParse(formData.get("sellerKind"));
+    if (!name.success || !phone.success || !address.success || !birthDate.success || !sellerKind.success) {
       toast.error("Preencha os seus dados e confirme que tem 18 anos ou mais.");
       return;
     }
     setBusy(true);
-    const { error } = await supabase.from("profiles").insert({
+    const { error } = await communityDb.from("profiles").insert({
       id: sessionUser.id,
       display_name: name.data,
       phone: phone.data,
       address: address.data,
       birth_date: birthDate.data,
+      seller_kind: sellerKind.data,
     });
     setBusy(false);
     if (error) {
@@ -944,6 +949,7 @@ function AuthDialogs({
                 <FormField label="Nome" htmlFor="profile-name"><Input id="profile-name" name="name" autoComplete="name" defaultValue={currentUser?.user_metadata["full_name"]?.toString() ?? ""} required minLength={2} maxLength={100} /></FormField>
                 <FormField label="Telefone" htmlFor="profile-phone"><Input id="profile-phone" name="phone" type="tel" autoComplete="tel" placeholder="+258 …" required minLength={5} maxLength={30} /></FormField>
                 <FormField label="Morada em Vilankulo" htmlFor="profile-address"><Input id="profile-address" name="address" autoComplete="street-address" placeholder="Bairro ou zona" required minLength={2} maxLength={300} /></FormField>
+                <FormField label="Tipo de vendedor" htmlFor="profile-seller-kind"><select id="profile-seller-kind" name="sellerKind" className="market-form-select" defaultValue="individual"><option value="individual">Particular</option><option value="business">Empresa / loja</option></select></FormField>
                 <FormField label="Data de nascimento" htmlFor="profile-birth-date"><Input id="profile-birth-date" name="birthDate" type="date" max={adultCutoff} required /></FormField>
                 <Button type="submit" disabled={busy} className="market-form-submit">{busy ? "A guardar…" : "Guardar e continuar"}<ArrowRight size={17} /></Button>
               </form>
@@ -954,6 +960,7 @@ function AuthDialogs({
                 <FormField label="Nome completo" htmlFor="register-name"><Input id="register-name" name="name" type="text" autoComplete="name" placeholder="O seu nome" required minLength={2} maxLength={100} /></FormField>
                 <div className="market-form-grid"><FormField label="Email" htmlFor="register-email"><Input id="register-email" name="email" type="email" autoComplete="email" placeholder="nome@email.com" required maxLength={255} /></FormField><FormField label="Telefone" htmlFor="register-phone"><Input id="register-phone" name="phone" type="tel" autoComplete="tel" placeholder="+258 …" required minLength={5} maxLength={30} /></FormField></div>
                 <FormField label="Morada em Vilankulo" htmlFor="register-address"><Input id="register-address" name="address" autoComplete="street-address" placeholder="Bairro ou zona" required minLength={2} maxLength={300} /></FormField>
+                <FormField label="Tipo de vendedor" htmlFor="register-seller-kind"><select id="register-seller-kind" name="sellerKind" className="market-form-select" defaultValue="individual"><option value="individual">Particular</option><option value="business">Empresa / loja</option></select></FormField>
                 <div className="market-form-grid"><FormField label="Data de nascimento · 18+" htmlFor="register-birthday"><Input id="register-birthday" name="birthDate" type="date" max={adultCutoff} required /></FormField><FormField label="Palavra-passe" htmlFor="register-password"><Input id="register-password" name="password" type="password" autoComplete="new-password" placeholder="Pelo menos 8 caracteres" required minLength={8} maxLength={72} /></FormField></div>
                 <p className="market-privacy-hint"><ShieldCheck size={15} /> A sua morada e data de nascimento nunca aparecem nos anúncios.</p>
                 <Button type="submit" disabled={busy} className="market-form-submit">{busy ? "A criar a conta…" : "Criar conta gratuita"}<ArrowRight size={17} /></Button>
