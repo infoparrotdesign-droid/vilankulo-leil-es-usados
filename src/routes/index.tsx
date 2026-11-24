@@ -31,6 +31,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getAdultCutoff, isAdultDateOfBirth, sanitizeImageName } from "@/lib/marketplace-rules";
+import { isVilaShopAdminEmail } from "@/lib/vilashop-config";
 import { getActiveListingPhotoUrls } from "@/lib/listing-photos.functions";
 import bicyclePhoto from "@/assets/used-bicycle.jpg";
 import phonePhoto from "@/assets/used-phone.jpg";
@@ -733,7 +734,6 @@ function Marketplace() {
               <>
                 <Button type="button" variant="ghost" className="market-account" onClick={() => setShowMyListings(true)}>Os meus anúncios</Button>
                 <a href="/conta" className="market-account">A minha comunidade</a>
-                {sessionUser.email?.toLowerCase() === "adminvilashop@gmail.com" && <Link to="/admin" className="market-account">Administração</Link>}
                 <Button type="button" variant="ghost" className="market-account" onClick={() => void signOut()} aria-label="Sair da conta">
                   <UserRound size={17} /> <span>{sessionUser.user_metadata["full_name"]?.toString().split(" ")[0] || "A minha conta"}</span>
                 </Button>
@@ -745,6 +745,9 @@ function Marketplace() {
                 <Button type="button" variant="outline" className="market-mobile-ad" onClick={openCreateListing}><ImagePlus size={17} /><span className="sr-only">Anunciar</span></Button>
                 <Button type="button" onClick={() => setShowRegister(true)} className="market-register-button">Criar conta</Button>
               </>
+            )}
+            {sessionUser && isVilaShopAdminEmail(sessionUser.email) && (
+              <Link to="/admin" className="market-account">Painel Administrativo</Link>
             )}
           </div>
         </div>
