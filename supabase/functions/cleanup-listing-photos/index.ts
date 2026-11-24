@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2.119.0";
 
+// Deletes only files whose database retention deadline has elapsed; listing records remain intact.
 type DuePhoto = { id: string; photo_path: string | null };
 
 function constantTimeEqual(left: string, right: string): boolean {
