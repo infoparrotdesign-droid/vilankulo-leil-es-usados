@@ -1,5 +1,6 @@
 -- VilaShop community, negotiation, trust and manual transaction workflow.
 -- Generated as a Supabase CLI migration by the GitHub Actions migration generator.
+-- Scope: follows, favorites, notifications, offers, reports, disputes and manual sales.
 -- No payment provider API is called: payment verification and seller settlement remain manual.
 
 -- Marketplace profile type is informational and does not affect authorization.
@@ -604,6 +605,29 @@ $$;
 revoke all on function public.get_public_seller_profile(uuid) from public;
 grant execute on function public.get_public_seller_profile(uuid) to anon, authenticated;
 grant update (seller_kind) on public.profiles to authenticated;
+
+
+create or replace function public.admin_review_listing_report(_report_id uuid,_decision text,_note text)
+returns public.listing_reports language plpgsql security definer set search_path = ''
+as $
+declare result_row public.listing_reports; uid uuid:=auth.uid();
+begin
+  if uid is null or not public.is_vilashop_admin() then raise exception 'Apenas a equipa VilaShop pode rever denúncias.'; end if;
+  if _decision not in ('under_review','resolved','dismissed') then raise exception 'Decisão de denúncia inválida.'; end if;
+  update public.listing_reports set status=_decision,reviewed_by=uid,reviewed_at=now(),
+    resolution_note=nullif(btrim(_note),'')
+  where id=_report_id and status in ('open','under_review')
+  returning * into result_row;
+  if not found then raise exception 'Denúncia não encontrada ou já tratada.'; end if;
+  insert into public.notifications(recipient_id,actor_id,kind,title,body,entity_type,entity_id)
+  values (result_row.reporter_id,uid,'report_update','Actualização da denúncia',
+    case _decision when 'under_review' then 'A sua denúncia está a ser analisada.' when 'resolved' then 'A sua denúncia foi analisada e resolvida.' else 'A sua denúncia foi analisada e arquivada.' end,
+    'report',_report_id);
+  return result_row;
+end;
+$;
+revoke all on function public.admin_review_listing_report(uuid,text,text) from public, anon;
+grant execute on function public.admin_review_listing_report(uuid,text,text) to authenticated;
 
 -- Admins can read and process reports and disputes; participants retain read access.
 create policy listing_reports_admin_read on public.listing_reports for select to authenticated
