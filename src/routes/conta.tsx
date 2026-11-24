@@ -18,7 +18,7 @@ type DataApi = {
 type Notice = { id: string; title: string; body: string; created_at: string; read_at: string | null };
 type Favorite = { id: string; listing_id: string; created_at: string; listings: { title: string; price: number; status: string } | null };
 type Follow = { id: string; seller_id: string; created_at: string };
-type Offer = { id: string; listing_id: string; amount: number; counter_amount: number | null; status: string; created_at: string };
+type Offer = { id: string; listing_id: string; buyer_id: string; seller_id: string; amount: number; counter_amount: number | null; status: string; created_at: string };
 type Sale = {
   id: string;
   listing_id: string;
@@ -52,7 +52,7 @@ function AccountPage() {
   const [follows, setFollows] = useState<Follow[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
-  const [paymentForms, setPaymentForms] = useState<Record<string, { method: string; reference: string }>>({});
+  const [counterValues, setCounterValues] = useState<Record<string, string>>({});
   const [disputes, setDisputes] = useState<Record<string, { reason: string; evidence: string }>>({});
 
   const load = useCallback(async () => {
@@ -70,7 +70,7 @@ function AccountPage() {
       db.from("notifications").select("id,title,body,created_at,read_at").order("created_at", { ascending: false }).limit(50),
       db.from("listing_favorites").select("id,listing_id,created_at,listings(title,price,status)").order("created_at", { ascending: false }).limit(100),
       db.from("seller_follows").select("id,seller_id,created_at").order("created_at", { ascending: false }).limit(100),
-      db.from("listing_offers").select("id,listing_id,amount,counter_amount,status,created_at").order("created_at", { ascending: false }).limit(100),
+      db.from("listing_offers").select("id,listing_id,buyer_id,seller_id,amount,counter_amount,status,created_at").order("created_at", { ascending: false }).limit(100),
       db.from("marketplace_sales").select("id,listing_id,buyer_id,seller_id,agreed_price,commission_amount,seller_net_amount,status,delivery_method,buyer_confirmation_deadline,created_at").order("created_at", { ascending: false }).limit(100),
     ]);
 
