@@ -40,7 +40,16 @@ const categories = ["Todos", "Eletrónicos", "Casa", "Moda", "Desporto", "Veícu
 type Category = (typeof categories)[number];
 type ListingType = "sale" | "auction";
 
-type SellerListing = {\n  id: string;\n  title: string;\n  status: string;\n  submitted_at: string | null;\n  publish_after: string | null;\n  review_note: string | null;\n};\n\ntype Listing = {
+type SellerListing = {
+  id: string;
+  title: string;
+  status: string;
+  submitted_at: string | null;
+  publish_after: string | null;
+  review_note: string | null;
+};
+
+type Listing = {
   id: string;
   seller_id: string;
   title: string;
@@ -142,7 +151,9 @@ function Marketplace() {
   const router = useRouter();
   const [sessionUser, setSessionUser] = useState<User | null>(null);
   const [profileReady, setProfileReady] = useState(false);
-  const [liveListings, setLiveListings] = useState<Listing[]>([]);\n  const [myListings, setMyListings] = useState<SellerListing[]>([]);\n  const [showMyListings, setShowMyListings] = useState(false);
+  const [liveListings, setLiveListings] = useState<Listing[]>([]);
+  const [myListings, setMyListings] = useState<SellerListing[]>([]);
+  const [showMyListings, setShowMyListings] = useState(false);
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<Category>("Todos");
   const [activeType, setActiveType] = useState<"all" | ListingType>("all");
@@ -424,7 +435,8 @@ function Marketplace() {
     }
     setShowCreate(false);
     form.reset();
-    if (submitted) setMyListings((current) => [submitted, ...current.filter((item) => item.id !== submitted.id)]);\n    toast.success("Anúncio enviado para observação. Será publicado automaticamente após 6 horas, salvo intervenção da administração.");
+    if (submitted) setMyListings((current) => [submitted, ...current.filter((item) => item.id !== submitted.id)]);
+    toast.success("Anúncio enviado para observação. Será publicado automaticamente após 6 horas, salvo intervenção da administração.");
     const { data: refreshed, error: refreshError } = await supabase
       .from("listings")
       .select("id, seller_id, title, description, category, item_condition, listing_type, price, highest_bid, photo_path")
@@ -512,7 +524,9 @@ function Marketplace() {
           <div className="market-header-actions">
             {sessionUser && profileReady ? (
               <>
-                <Button type="button" variant="ghost" className="market-account" onClick={() => setShowMyListings(true)}>Os meus anúncios</Button>\n                {sessionUser.email?.toLowerCase() === "adminvilashop@gmail.com" && <Link to="/admin" className="market-account">Administração</Link>}\n                <Button type="button" variant="ghost" className="market-account" onClick={() => void signOut()} aria-label="Sair da conta">
+                <Button type="button" variant="ghost" className="market-account" onClick={() => setShowMyListings(true)}>Os meus anúncios</Button>
+                {sessionUser.email?.toLowerCase() === "adminvilashop@gmail.com" && <Link to="/admin" className="market-account">Administração</Link>}
+                <Button type="button" variant="ghost" className="market-account" onClick={() => void signOut()} aria-label="Sair da conta">
                   <UserRound size={17} /> <span>{sessionUser.user_metadata.full_name?.toString().split(" ")[0] || "A minha conta"}</span>
                 </Button>
                 <Button type="button" onClick={openCreateListing} className="market-list-button"><ImagePlus size={16} /> Anunciar</Button>
