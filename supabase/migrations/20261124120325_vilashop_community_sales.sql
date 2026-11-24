@@ -361,9 +361,13 @@ create table if not exists public.marketplace_sales (
   seller_id uuid not null references public.profiles(id) on delete restrict,
   offer_id uuid references public.listing_offers(id) on delete restrict,
   agreed_price numeric(12,2) not null check (agreed_price > 0),
-  commission_rate numeric(5,4) not null default 0.05 check (commission_rate = 0.05),
-  commission_amount numeric(12,2) generated always as (round(agreed_price * commission_rate,2)) stored,
-  seller_net_amount numeric(12,2) generated always as (agreed_price - round(agreed_price * commission_rate,2)) stored,
+  commission_rate numeric(5,4) default null check (commission_rate is null or commission_rate between 0 and 1),
+  commission_amount numeric(12,2) generated always as (
+    case when commission_rate is null then null else round(agreed_price * commission_rate,2) end
+  ) stored,
+  seller_net_amount numeric(12,2) generated always as (
+    case when commission_rate is null then null else agreed_price - round(agreed_price * commission_rate,2) end
+  ) stored,
   delivery_method text not null check (delivery_method in ('in_person','seller_delivery')),
   status text not null default 'awaiting_payment' check (status in ('awaiting_payment','payment_reported','payment_confirmed','seller_delivered','buyer_confirmed','disputed','delivery_confirmed','payout_recorded','cancelled')),
   payment_method text,
@@ -613,6 +617,9 @@ declare result_row public.marketplace_sales; uid uuid:=auth.uid();
 begin
   if uid is null or not public.is_vilashop_admin() then raise exception 'Apenas a administração pode registar a liquidação.'; end if;
   if nullif(btrim(_payout_reference),'') is null then raise exception 'Registe a referência do pagamento ao vendedor.'; end if;
+  if exists (select 1 from public.marketplace_sales where id=_sale_id and seller_net_amount is null) then
+    raise exception 'A comissão ainda não foi aprovada; a liquidação permanece bloqueada.';
+  end if;
   update public.marketplace_sales set status='payout_recorded',payout_recorded_at=now(),
     payout_reference=btrim(_payout_reference),updated_at=now()
   where id=_sale_id and status='delivery_confirmed'
