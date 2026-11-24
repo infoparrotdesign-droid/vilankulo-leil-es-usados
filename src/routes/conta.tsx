@@ -22,6 +22,8 @@ type Offer = { id: string; listing_id: string; buyer_id: string; seller_id: stri
 type Sale = {
   id: string;
   listing_id: string;
+  buyer_id: string;
+  seller_id: string;
   agreed_price: number;
   commission_amount: number;
   seller_net_amount: number;
