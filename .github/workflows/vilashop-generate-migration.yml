@@ -16,6 +16,7 @@ concurrency:
 
 jobs:
   generate:
+    if: ${{ contains(github.event.head_commit.added, 'supabase/migration-drafts/vilashop_community_sales.sql') || contains(github.event.head_commit.modified, 'supabase/migration-drafts/vilashop_community_sales.sql') }}
     name: Generate timestamped migration with Supabase CLI
     runs-on: ubuntu-latest
     timeout-minutes: 10
