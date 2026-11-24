@@ -12,14 +12,14 @@ export const getActiveListingPhotoUrls = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: listings, error } = await supabaseAdmin
       .from("listings")
-      .select("id, photo_path")
+      .select("id, photo_path, listing_type, status")
       .in("id", listingIds)
-      .eq("status", "active");
+      .in("status", ["active", "ended"]);
 
     if (error) throw new Error("Não foi possível carregar as fotografias dos anúncios.");
 
     const photos = (listings ?? []).flatMap((listing) =>
-      listing.photo_path ? [{ listingId: listing.id, path: listing.photo_path }] : [],
+      listing.photo_path && (listing.status === "active" || (listing.status === "ended" && listing.listing_type === "auction")) ? [{ listingId: listing.id, path: listing.photo_path }] : [],
     );
     if (photos.length === 0) return [];
 
