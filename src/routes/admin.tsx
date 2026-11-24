@@ -22,6 +22,7 @@ type AdminListing = {
 };
 
 type AdminDatabase = {
+  from: (table: string) => any;
   rpc: (
     functionName: string,
     args?: Record<string, unknown>,
@@ -67,20 +68,26 @@ function AdminPage() {
   const [busy, setBusy] = useState(false);
   const [listings, setListings] = useState<AdminListing[]>([]);
   const [reasons, setReasons] = useState<Record<string, string>>({});
+  const [reports, setReports] = useState<any[]>([]);
+  const [sales, setSales] = useState<any[]>([]);
+  const [disputes, setDisputes] = useState<any[]>([]);
+  const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
 
   const loadQueue = useCallback(async () => {
-    const { data, error } = await adminDatabase
-      .from("listings")
-      .select("id, title, description, category, item_condition, listing_type, price, status, created_at, seller_id")
-      .eq("status", "pending_review")
-      .order("created_at", { ascending: true })
-      .limit(50);
-
-    if (error) {
-      toast.error("Não foi possível carregar a fila de anúncios.");
-      return;
+    const [listingResult, reportResult, saleResult, disputeResult] = await Promise.all([
+      adminDatabase.from("listings").select("id, title, description, category, item_condition, listing_type, price, status, created_at, seller_id").eq("status", "pending_review").order("created_at", { ascending: true }).limit(50),
+      adminDatabase.from("listing_reports").select("id,listing_id,reporter_id,reason,details,status,created_at").order("created_at", { ascending: true }).limit(50),
+      adminDatabase.from("marketplace_sales").select("id,listing_id,buyer_id,seller_id,agreed_price,commission_amount,seller_net_amount,status,payment_reference,created_at").order("created_at", { ascending: false }).limit(100),
+      adminDatabase.from("sale_disputes").select("id,sale_id,opened_by,reason,evidence_note,status,created_at").order("created_at", { ascending: true }).limit(50),
+    ]);
+    if (listingResult.error) toast.error("Não foi possível carregar a fila de anúncios.");
+    if (reportResult.error || saleResult.error || disputeResult.error) {
+      toast.error("Não foi possível carregar todas as filas administrativas. Confirme se a migration comunitária já foi aplicada.");
     }
-    setListings(data ?? []);
+    setListings(listingResult.data ?? []);
+    setReports(reportResult.data ?? []);
+    setSales(saleResult.data ?? []);
+    setDisputes(disputeResult.data ?? []);
   }, []);
 
   const verifyAdmin = useCallback(async () => {
@@ -89,7 +96,7 @@ function AdminPage() {
     if (userError || !userData.user) {
       setSignedInEmail(null);
       setIsAdmin(false);
-      setListings([]);
+      setListings([]); setReports([]); setSales([]); setDisputes([]);
       setChecking(false);
       return;
     }
@@ -98,7 +105,7 @@ function AdminPage() {
     const { data, error } = await adminDatabase.rpc("is_vilashop_admin");
     if (error || data !== true) {
       setIsAdmin(false);
-      setListings([]);
+      setListings([]); setReports([]); setSales([]); setDisputes([]);
       setChecking(false);
       return;
     }
@@ -133,8 +140,16 @@ function AdminPage() {
     }
     setSignedInEmail(null);
     setIsAdmin(false);
-    setListings([]);
+    setListings([]); setReports([]); setSales([]); setDisputes([]);
     toast.success("Sessão terminada.");
+  }
+
+  async function runAdminAction(name: string, args: Record<string, unknown>, success: string) {
+    setBusy(true);
+    const { error } = await adminDatabase.rpc(name, args);
+    setBusy(false);
+    if (error) toast.error(error.message);
+    else { toast.success(success); await loadQueue(); }
   }
 
   async function moderate(listing: AdminListing, decision: "approve" | "reject" | "suspend") {
