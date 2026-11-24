@@ -220,6 +220,9 @@ function Marketplace() {
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [sortBy, setSortBy] = useState<"recent" | "price">("recent");
   const [busy, setBusy] = useState(false);
+  const [draftPrice, setDraftPrice] = useState("");
+  const draftSellerPrice = Number(draftPrice);
+  const draftBuyerTotal = Number.isFinite(draftSellerPrice) && draftSellerPrice > 0 ? Math.round(draftSellerPrice * 1.1 * 100) / 100 : 0;
   const [isFavorite, setIsFavorite] = useState(false);
   const [isFollowingSeller, setIsFollowingSeller] = useState(false);
   const [publicBidHistory, setPublicBidHistory] = useState<PublicBid[]>([]);
@@ -529,6 +532,7 @@ function Marketplace() {
     }
     setShowCreate(false);
     form.reset();
+    setDraftPrice("");
     if (submitted) setMyListings((current) => [submitted, ...current.filter((item) => item.id !== submitted.id)]);
     toast.success("Anúncio publicado com sucesso.");
     const { data: refreshed, error: refreshError } = await supabase
@@ -885,8 +889,10 @@ function Marketplace() {
             <FormField label="Descrição" htmlFor="listing-description"><textarea id="listing-description" name="description" className="market-textarea" placeholder="Estado, tamanho, detalhes importantes…" required minLength={10} maxLength={1200} rows={3} /></FormField>
             <div className="market-form-grid">
               <FormField label="Estado" htmlFor="listing-condition"><select id="listing-condition" name="itemCondition" className="market-form-select" defaultValue="Bom estado"><option>Como novo</option><option>Bom estado</option><option>Usado</option></select></FormField>
-              <FormField label="Preço em meticais" htmlFor="listing-price"><Input id="listing-price" type="number" name="price" placeholder="Ex.: 5 000" required min="1" step="0.01" /></FormField>
+              <FormField label="O valor que pretende receber (MZN)" htmlFor="listing-price"><Input id="listing-price" type="number" name="price" placeholder="Ex.: 5 000" required min="1" step="0.01" value={draftPrice} onChange={(event) => setDraftPrice(event.target.value)} /></FormField>
             </div>
+            <div className="market-private-note" role="note"><ShieldCheck size={16} /><span><strong>Preço transparente:</strong> indique quanto pretende receber pela venda. O VilaShop acrescenta uma taxa de serviço de 10% ao comprador. Exemplo: 5.000 MT para si = 5.500 MT para o comprador. Considere o total apresentado para manter o seu anúncio competitivo.</span></div>
+            {draftBuyerTotal > 0 && <div className="rounded-xl border border-border bg-card p-3 text-sm"><p className="flex justify-between gap-3"><span>Você recebe</span><strong>{formatPrice(draftSellerPrice)}</strong></p><p className="mt-1 flex justify-between gap-3 text-muted-foreground"><span>Taxa VilaShop (10%) paga pelo comprador</span><span>{formatPrice(draftBuyerTotal - draftSellerPrice)}</span></p><p className="mt-2 flex justify-between gap-3 border-t pt-2 text-base"><strong>Total estimado para o comprador</strong><strong>{formatPrice(draftBuyerTotal)}</strong></p></div>}
             <fieldset className="market-listing-type"><legend>Como quer vender?</legend><label className="market-radio-line"><input type="radio" name="listingType" value="sale" defaultChecked /><span><strong>Venda directa</strong><small>Defina o preço final.</small></span></label><label className="market-radio-line"><input type="radio" name="listingType" value="negotiation" /><span><strong>Negociação</strong><small>Receba propostas e envie contrapropostas.</small></span></label><label className="market-radio-line"><input type="radio" name="listingType" value="auction" /><span><strong>Leilão</strong><small>Receba lances durante 3 dias.</small></span><Gavel size={17} /></label></fieldset>
             <FormField label="Foto do artigo" htmlFor="listing-photo"><div className="market-upload-line"><ImagePlus size={18} /><span>Uma foto clara ajuda o artigo a destacar-se.</span></div><Input id="listing-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required aria-label="Escolher foto do artigo" /></FormField>
             <div className="market-private-note"><ShieldCheck size={16} /><span>Use fotos suas. O seu endereço e telefone não ficam visíveis no anúncio.</span></div>
@@ -900,7 +906,7 @@ function Marketplace() {
           {selectedListing && <>
             {selectedListing.imageUrl && <img src={selectedListing.imageUrl} alt={selectedListing.title} className="market-detail-image" width={816} height={816} />}
             <DialogHeader className="market-form-header"><div className="market-product-flags"><span className={`market-item-tag ${selectedListing.listing_type === "auction" ? "tag-auction" : "tag-sale"}`}>{selectedListing.listing_type === "auction" ? <><Gavel size={12} /> {selectedListing.status === "ended" ? "Leilão encerrado" : "Leilão"}</> : selectedListing.listing_type === "negotiation" ? "Negociável" : "À venda"}</span>{selectedListing.isSample && <span className="market-sample-label">Exemplo</span>}</div><DialogTitle>{selectedListing.title}</DialogTitle><DialogDescription>{selectedListing.description}</DialogDescription></DialogHeader>
-            <div className="market-detail-price"><span>{selectedListing.listing_type === "auction" ? "Valor actual" : "Preço"}</span><strong>{formatPrice(selectedListing.highest_bid ?? selectedListing.price)}</strong><small><MapPin size={13} /> Vilankulo</small></div>
+            <div className="market-detail-price"><span>{selectedListing.listing_type === "auction" ? "Lance actual (valor base)" : "Preço definido pelo vendedor"}</span><strong>{formatPrice(selectedListing.highest_bid ?? selectedListing.price)}</strong><small><MapPin size={13} /> Vilankulo</small><div className="mt-2 grid gap-1 text-sm"><p className="flex justify-between gap-3"><span>Taxa de serviço VilaShop (10%)</span><span>{formatPrice((selectedListing.highest_bid ?? selectedListing.price) * 0.1)}</span></p><p className="flex justify-between gap-3 font-semibold"><span>Total estimado para o comprador</span><span>{formatPrice((selectedListing.highest_bid ?? selectedListing.price) * 1.1)}</span></p></div></div>
             <div className="market-condition-row"><span>Estado</span><strong>{selectedListing.item_condition}</strong></div>
             {!selectedListing.isSample && <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" disabled={busy} onClick={() => void toggleFavorite(selectedListing)}><Heart className="mr-2 size-4" fill={isFavorite ? "currentColor" : "none"} />{isFavorite ? "Guardado" : "Guardar artigo"}</Button><Button type="button" variant="outline" disabled={busy || selectedListing.seller_id === sessionUser?.id} onClick={() => void toggleSellerFollow(selectedListing)}><UserRound className="mr-2 size-4" />{isFollowingSeller ? "A seguir vendedor" : "Seguir vendedor"}</Button></div>}
             {selectedListing.listing_type === "auction" && publicBidHistory.length > 0 && <section className="rounded-xl border p-3"><h3 className="font-semibold">Histórico de propostas</h3><p className="mb-2 text-xs text-muted-foreground">Os participantes permanecem anónimos para proteger a sua privacidade.</p><div className="grid gap-2">{publicBidHistory.map((bid) => <div key={bid.bid_number} className="flex justify-between gap-3 text-sm"><span>Participante {String(bid.bid_number).padStart(2, "0")}</span><strong>{formatPrice(bid.amount)}</strong><span className="text-xs text-muted-foreground">{new Date(bid.placed_at).toLocaleString("pt-MZ")}</span></div>)}</div></section>}
@@ -924,7 +930,7 @@ function ListingCard({ listing, onOpen }: { listing: Listing; onOpen: () => void
           {listing.isSample && <span className="market-sample-label">Exemplo</span>}
           <span className="market-card-heart" aria-hidden="true"><Heart size={16} /></span>
         </span>
-        <span className="market-card-copy"><span className="market-card-category">{listing.category}</span><span className="market-card-title">{listing.title}</span><span className="market-card-price">{formatPrice(listing.highest_bid ?? listing.price)}{listing.listing_type === "auction" && <small> lance inicial</small>}</span><span className="market-card-location"><MapPin size={13} /> Vilankulo <span>·</span> {listing.item_condition}</span></span>
+        <span className="market-card-copy"><span className="market-card-category">{listing.category}</span><span className="market-card-title">{listing.title}</span><span className="market-card-price">{formatPrice((listing.highest_bid ?? listing.price) * 1.1)}<small> total estimado · inclui taxa VilaShop</small></span><span className="market-card-location"><MapPin size={13} /> Vilankulo <span>·</span> {listing.item_condition}</span></span>
       </button>
     </article>
   );
