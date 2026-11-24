@@ -231,16 +231,17 @@ function Marketplace() {
     };
   }, []);
 
+  const sellerId = sessionUser?.id;
   useEffect(() => {
     let current = true;
-    if (!sessionUser) {
+    if (!sellerId) {
       setMyListings([]);
       return;
     }
     void supabase
       .from("listings")
       .select("id, title, status, submitted_at, publish_after, review_note")
-      .eq("seller_id", sessionUser.id)
+      .eq("seller_id", sellerId)
       .order("submitted_at", { ascending: false })
       .limit(30)
       .then(({ data, error }) => {
@@ -252,7 +253,7 @@ function Marketplace() {
         setMyListings(data ?? []);
       });
     return () => { current = false; };
-  }, [sessionUser?.id]);
+  }, [sellerId]);
 
   const visibleListings = useMemo(() => {
     const items = liveListings.length > 0 ? liveListings : sampleItems;
