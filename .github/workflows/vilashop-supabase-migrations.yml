@@ -52,7 +52,7 @@ jobs:
       - name: Link using direct PostgreSQL endpoint (bypass pooler)
         shell: bash
         run: |
-          test "$(sed -n 's/^project_id = "\\(.*\\)"/\\1/p' supabase/config.toml)" = "$SUPABASE_PROJECT_ID"
+          grep -Fxq "project_id = \"$SUPABASE_PROJECT_ID\"" supabase/config.toml
           supabase link --project-ref "$SUPABASE_PROJECT_ID" --skip-pooler
 
       - name: Preview pending migrations over direct connection only
