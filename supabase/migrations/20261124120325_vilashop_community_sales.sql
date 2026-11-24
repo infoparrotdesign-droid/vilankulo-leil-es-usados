@@ -9,7 +9,7 @@ alter table public.profiles
   check (seller_kind in ('individual','business'));
 
 create or replace function public.create_profile_for_new_user()
-returns trigger language plpgsql security definer set search_path = public
+returns trigger language plpgsql security definer set search_path = ''
 as $$
 declare
   supplied_birth_date date;
@@ -269,6 +269,7 @@ returns public.listing_offers language plpgsql security definer set search_path 
 as $$
 declare o public.listing_offers; result_row public.listing_offers; uid uuid := auth.uid();
 begin
+  if uid is null then raise exception 'Inicie sessão.'; end if;
   select * into o from public.listing_offers where id = _offer_id for update;
   if not found or o.buyer_id <> uid or o.status <> 'countered' or o.counter_amount is null then
     raise exception 'A contraproposta já não está disponível.';
@@ -454,7 +455,9 @@ begin
   end if;
   if _delivery_method not in ('in_person','seller_delivery') then raise exception 'Método de entrega inválido.'; end if;
   select * into l from public.listings where id=_listing_id for update;
-  if not found or (l.listing_type='sale' and l.status<>'active') or (l.listing_type='auction' and l.status<>'ended') then
+  if not found or (l.listing_type='sale' and l.status<>'active')
+     or (l.listing_type='negotiation' and l.status<>'active')
+     or (l.listing_type='auction' and l.status<>'ended') then
     raise exception 'Este anúncio já não está disponível.';
   end if;
   if l.seller_id=uid then raise exception 'Não pode comprar o seu próprio artigo.'; end if;
@@ -495,6 +498,7 @@ returns public.marketplace_sales language plpgsql security definer set search_pa
 as $$
 declare s public.marketplace_sales; result_row public.marketplace_sales; uid uuid:=auth.uid();
 begin
+  if uid is null then raise exception 'Inicie sessão.'; end if;
   select * into s from public.marketplace_sales where id=_sale_id for update;
   if not found or s.buyer_id<>uid or s.status<>'awaiting_payment' then raise exception 'Este pagamento já não pode ser reportado.'; end if;
   if nullif(btrim(_payment_method),'') is null or nullif(btrim(_payment_reference),'') is null then
@@ -569,6 +573,7 @@ returns public.sale_disputes language plpgsql security definer set search_path =
 as $$
 declare s public.marketplace_sales; result_row public.sale_disputes; uid uuid:=auth.uid();
 begin
+  if uid is null then raise exception 'Inicie sessão.'; end if;
   select * into s from public.marketplace_sales where id=_sale_id for update;
   if not found or s.buyer_id<>uid or s.status<>'seller_delivered'
     or s.buyer_confirmation_deadline<now() then
