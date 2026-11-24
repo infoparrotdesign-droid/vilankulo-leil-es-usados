@@ -7,7 +7,10 @@ on:
     paths:
       - "supabase/migrations/**"
       - "supabase/config.toml"
+      - "supabase/functions/cleanup-listing-photos/**"
       - ".github/workflows/vilashop-supabase-migrations.yml"
+  schedule:
+    - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
       apply_migrations:
@@ -25,6 +28,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: ${{ github.event_name != 'schedule' }}
     name: Test direct PostgreSQL connection
     runs-on: ubuntu-latest
     environment: production
@@ -58,6 +62,13 @@ jobs:
       - name: Preview pending migrations over direct connection only
         run: supabase db push --dry-run --remote="$SUPABASE_PROJECT_ID"
 
+      - name: Configure and deploy 72-hour photo cleanup function
+        if: ${{ github.event_name == 'push' }}
+        shell: bash
+        run: |
+          supabase secrets set --project-ref "$SUPABASE_PROJECT_ID" "VILASHOP_CLEANUP_TOKEN=$SUPABASE_ACCESS_TOKEN"
+          supabase functions deploy cleanup-listing-photos --project-ref "$SUPABASE_PROJECT_ID"
+
       - name: Apply pending migrations only when explicitly requested
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.apply_migrations == true }}
         run: supabase db push --yes --remote="$SUPABASE_PROJECT_ID"
@@ -65,3 +76,25 @@ jobs:
       - name: Verify remote migration history
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.apply_migrations == true }}
         run: supabase migration list --remote="$SUPABASE_PROJECT_ID"
+
+  cleanup_photos:
+    if: ${{ github.event_name == 'schedule' }}
+    name: Remove listing photos after 72 hours
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Validate cleanup secret
+        run: test -n "$SUPABASE_ACCESS_TOKEN"
+
+      - name: Run photo cleanup function
+        shell: bash
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "x-vilashop-cleanup-token: $SUPABASE_ACCESS_TOKEN" \
+            --header "Content-Type: application/json" \
+            --data '{}' \
+            "https://ibwasunbdqplanwhnexf.supabase.co/functions/v1/cleanup-listing-photos"
