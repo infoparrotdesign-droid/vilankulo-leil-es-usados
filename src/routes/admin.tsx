@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { VILASHOP_ADMIN_EMAIL, isVilaShopAdminEmail } from "@/lib/vilashop-config";
 
 type AdminListing = {
   id: string;
@@ -82,6 +83,12 @@ function AdminPage() {
     }
 
     setSignedInEmail(userData.user.email ?? null);
+    if (!isVilaShopAdminEmail(userData.user.email)) {
+      setIsAdmin(false);
+      setListings([]); setReports([]); setSales([]); setDisputes([]);
+      setChecking(false);
+      return;
+    }
     const { data, error } = await adminDatabase.rpc("is_vilashop_admin");
     if (error || data !== true) {
       setIsAdmin(false);
@@ -101,6 +108,10 @@ function AdminPage() {
 
   async function submitLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!isVilaShopAdminEmail(email)) {
+      toast.error(`A administração está reservada a ${VILASHOP_ADMIN_EMAIL}.`);
+      return;
+    }
     setBusy(true);
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setBusy(false);
@@ -184,7 +195,7 @@ function AdminPage() {
           </div>
           <h1 className="mt-4 text-2xl font-semibold tracking-tight">Área reservada</h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Entre com a conta administrativa autorizada para gerir a moderação do VilaShop.
+            Entre com a conta administrativa autorizada para gerir a plataforma. Acesso reservado a {VILASHOP_ADMIN_EMAIL}.
           </p>
           {signedInEmail && (
             <p className="mt-3 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
