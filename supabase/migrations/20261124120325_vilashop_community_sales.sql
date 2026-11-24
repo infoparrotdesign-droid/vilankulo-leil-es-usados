@@ -39,7 +39,7 @@ begin
   values (new.id,supplied_name,supplied_phone,supplied_address,supplied_birth_date,supplied_seller_kind);
   return new;
 end;
-$;
+$$;
 revoke execute on function public.create_profile_for_new_user() from public, anon, authenticated;
 
 alter table public.listings drop constraint if exists listings_listing_type_check;
@@ -319,7 +319,7 @@ begin
     perform cron.schedule('vilashop-end-due-auctions','* * * * *','select public.end_due_vilashop_auctions();');
   end if;
 end;
-$;
+$$;
 
 -- Public bid history deliberately excludes bidder IDs and profile details.
 create or replace function public.get_listing_bid_history(_listing_id uuid)
@@ -687,7 +687,7 @@ begin
     'report',_report_id);
   return result_row;
 end;
-$;
+$$;
 revoke all on function public.admin_review_listing_report(uuid,text,text) from public, anon;
 grant execute on function public.admin_review_listing_report(uuid,text,text) to authenticated;
 
