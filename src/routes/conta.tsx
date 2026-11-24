@@ -71,7 +71,7 @@ function AccountPage() {
       db.from("listing_favorites").select("id,listing_id,created_at,listings(title,price,status)").order("created_at", { ascending: false }).limit(100),
       db.from("seller_follows").select("id,seller_id,created_at").order("created_at", { ascending: false }).limit(100),
       db.from("listing_offers").select("id,listing_id,amount,counter_amount,status,created_at").order("created_at", { ascending: false }).limit(100),
-      db.from("marketplace_sales").select("id,listing_id,agreed_price,commission_amount,seller_net_amount,status,delivery_method,buyer_confirmation_deadline,created_at").order("created_at", { ascending: false }).limit(100),
+      db.from("marketplace_sales").select("id,listing_id,buyer_id,seller_id,agreed_price,commission_amount,seller_net_amount,status,delivery_method,buyer_confirmation_deadline,created_at").order("created_at", { ascending: false }).limit(100),
     ]);
 
     if (noticeResult.error) toast.error("Não foi possível carregar as notificações. Confirme se as migrations da comunidade já foram aplicadas.");
@@ -199,7 +199,7 @@ function AccountPage() {
           {offers.length === 0 ? <Empty>As suas propostas e contrapropostas vão aparecer aqui.</Empty> : offers.map((item) => (
             <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4">
               <div><p className="font-semibold">{item.amount.toLocaleString("pt-MZ")} MT {item.counter_amount ? `· contraproposta ${item.counter_amount.toLocaleString("pt-MZ")} MT` : ""}</p><p className="text-xs text-muted-foreground">Anúncio {item.listing_id.slice(0, 8)} · {offerLabel(item.status)}</p></div>
-              {item.status === "countered" && <Button size="sm" disabled={busy} onClick={() => void callAction("accept_listing_counteroffer", { _offer_id: item.id }, "Contraproposta aceite.")}>Aceitar contraproposta</Button>}
+              {item.status === "countered" && <Button size="sm" disabled={busy} onClick={() => void callAction("accept_listing_counteroffer", { _offer_id: item.id }, "Contraproposta aceite.")}>Aceitar contraproposta</Button>}{item.status === "accepted" && <Button size="sm" disabled={busy} onClick={() => void callAction("create_marketplace_sale", { _listing_id: item.listing_id, _delivery_method: "in_person", _offer_id: item.id }, "Compra iniciada. Consulte a área de compras.")}>Iniciar compra</Button>}
             </div>
           ))}
         </Section>
@@ -216,14 +216,15 @@ function AccountPage() {
                 <p>Comissão (5%): <strong>{sale.commission_amount.toLocaleString("pt-MZ")} MT</strong></p>
                 <p>Vendedor recebe: <strong>{sale.seller_net_amount.toLocaleString("pt-MZ")} MT</strong></p>
               </div>
-              {sale.status === "awaiting_payment" && (
+              {sale.status === "awaiting_payment" && sale.buyer_id === userId && (
                 <form className="mt-4 grid gap-3 rounded-lg bg-muted/60 p-3 sm:grid-cols-3" onSubmit={(event) => void reportPayment(event, sale.id)}>
                   <div className="grid gap-1"><Label htmlFor={`method-${sale.id}`}>Meio de pagamento</Label><Input id={`method-${sale.id}`} name="method" placeholder="Transferência, M-Pesa Business…" required /></div>
                   <div className="grid gap-1"><Label htmlFor={`reference-${sale.id}`}>Referência</Label><Input id={`reference-${sale.id}`} name="reference" required /></div>
                   <div className="flex items-end"><Button className="w-full" type="submit" disabled={busy}>Comunicar pagamento</Button></div>
                 </form>
               )}
-              {sale.status === "seller_delivered" && sale.buyer_confirmation_deadline && (
+              {sale.status === "payment_confirmed" && sale.seller_id === userId && <div className="mt-4"><Button disabled={busy} onClick={() => void callAction("seller_mark_sale_delivered", { _sale_id: sale.id }, "Entrega comunicada. O comprador tem 48 horas para confirmar.")}>Comunicar entrega do artigo</Button></div>}
+              {sale.status === "seller_delivered" && sale.buyer_id === userId && sale.buyer_confirmation_deadline && (
                 <div className="mt-4 grid gap-3 rounded-lg bg-muted/60 p-3">
                   <p className="text-sm">O vendedor informou a entrega. Confirme a recepção ou apresente uma reclamação até {new Date(sale.buyer_confirmation_deadline).toLocaleString("pt-MZ")}.</p>
                   <div className="flex flex-wrap gap-2"><Button disabled={busy} onClick={() => void callAction("buyer_confirm_sale_receipt", { _sale_id: sale.id }, "Recepção confirmada. A equipa fará a validação oficial.")}>Confirmar recepção</Button></div>
@@ -235,7 +236,8 @@ function AccountPage() {
                   </form>
                 </div>
               )}
-              {sale.status === "payment_confirmed" && <p className="mt-3 text-sm text-muted-foreground"><Truck className="mr-1 inline size-4" /> Aguardamos que o vendedor organize e comunique a entrega.</p>}
+              {sale.status === "payment_confirmed" && sale.buyer_id === userId && <p className="mt-3 text-sm text-muted-foreground"><Truck className="mr-1 inline size-4" /> Aguardamos que o vendedor organize e comunique a entrega.</p>}
+              {sale.status === "seller_delivered" && sale.seller_id === userId && <p className="mt-3 text-sm text-muted-foreground">Entrega comunicada. Aguardamos confirmação do comprador dentro de 48 horas.</p>}
               {sale.status === "delivery_confirmed" && <p className="mt-3 text-sm text-muted-foreground">Entrega validada pela equipa. Liquidação do vendedor prevista até 3 dias.</p>}
             </article>
           ))}
