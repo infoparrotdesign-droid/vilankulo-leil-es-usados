@@ -25,8 +25,9 @@ type Sale = {
   buyer_id: string;
   seller_id: string;
   agreed_price: number;
-  commission_amount: number | null;
-  seller_net_amount: number | null;
+  commission_amount: number;
+  buyer_total_amount: number;
+  seller_net_amount: number;
   status: string;
   delivery_method: string;
   buyer_confirmation_deadline: string | null;
@@ -73,7 +74,7 @@ function AccountPage() {
       db.from("listing_favorites").select("id,listing_id,created_at,listings(title,price,status)").order("created_at", { ascending: false }).limit(100),
       db.from("seller_follows").select("id,seller_id,created_at").order("created_at", { ascending: false }).limit(100),
       db.from("listing_offers").select("id,listing_id,buyer_id,seller_id,amount,counter_amount,status,created_at").order("created_at", { ascending: false }).limit(100),
-      db.from("marketplace_sales").select("id,listing_id,buyer_id,seller_id,agreed_price,commission_amount,seller_net_amount,status,delivery_method,buyer_confirmation_deadline,created_at").order("created_at", { ascending: false }).limit(100),
+      db.from("marketplace_sales").select("id,listing_id,buyer_id,seller_id,agreed_price,commission_amount,buyer_total_amount,seller_net_amount,status,delivery_method,buyer_confirmation_deadline,created_at").order("created_at", { ascending: false }).limit(100),
     ]);
 
     if (noticeResult.error) toast.error("Não foi possível carregar as notificações. Confirme se as migrations da comunidade já foram aplicadas.");
@@ -215,10 +216,11 @@ function AccountPage() {
                 <div><p className="font-semibold">Venda {sale.id.slice(0, 8)}</p><p className="text-xs text-muted-foreground">Artigo {sale.listing_id.slice(0, 8)} · {sale.delivery_method === "in_person" ? "Encontro presencial" : "Entrega pelo vendedor"}</p></div>
                 <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold">{saleLabel(sale.status)}</span>
               </div>
-              <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
-                <p>Preço: <strong>{sale.agreed_price.toLocaleString("pt-MZ")} MT</strong></p>
-                <p>Comissão: <strong>{sale.commission_amount == null ? "Por definir" : `${sale.commission_amount.toLocaleString("pt-MZ")} MT`}</strong></p>
-                <p>Vendedor recebe: <strong>{sale.seller_net_amount == null ? "Por definir" : `${sale.seller_net_amount.toLocaleString("pt-MZ")} MT`}</strong></p>
+              <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                <p>Valor do artigo: <strong>{sale.agreed_price.toLocaleString("pt-MZ")} MT</strong></p>
+                <p>Taxa VilaShop (10%): <strong>{sale.commission_amount.toLocaleString("pt-MZ")} MT</strong></p>
+                <p>Total pago pelo comprador: <strong>{sale.buyer_total_amount.toLocaleString("pt-MZ")} MT</strong></p>
+                <p>Vendedor recebe: <strong>{sale.seller_net_amount.toLocaleString("pt-MZ")} MT</strong></p>
               </div>
               {sale.status === "awaiting_payment" && sale.buyer_id === userId && (
                 <form className="mt-4 grid gap-3 rounded-lg bg-muted/60 p-3 sm:grid-cols-3" onSubmit={(event) => void reportPayment(event, sale.id)}>
