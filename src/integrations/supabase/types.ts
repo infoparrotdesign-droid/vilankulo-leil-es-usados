@@ -94,12 +94,6 @@ export type Database = {
         }
         Relationships: []
       }
-      vilashop_admins: {
-        Row: { created_at: string; user_id: string }
-        Insert: { created_at?: string; user_id: string }
-        Update: { created_at?: string; user_id?: string }
-        Relationships: []
-      }
       profiles: {
         Row: {
           address: string
@@ -135,18 +129,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      admin_moderate_listing: {
-        Args: { _decision: string; _listing_id: string; _reason?: string | null }
-        Returns: Database["public"]["Tables"]["listings"]["Row"]
-      }
-      is_vilashop_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      publish_due_vilashop_listings: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
       get_seller_contact: {
         Args: { _listing_id: string }
         Returns: {
