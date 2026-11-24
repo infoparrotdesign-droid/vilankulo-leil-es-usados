@@ -593,6 +593,29 @@ function Marketplace() {
     else { toast.success("Proposta enviada ao vendedor."); setSelectedListing(null); }
   }
 
+  async function reportListing(event: FormEvent<HTMLFormElement>, listing: Listing) {
+    event.preventDefault();
+    if (!sessionUser || !profileReady) { setShowLogin(true); toast.info("Entre na sua conta para denunciar um anúncio."); return; }
+    if (listing.isSample) { toast.info("Este anúncio é apenas um exemplo."); return; }
+    const data = new FormData(event.currentTarget);
+    const reason = String(data.get("reportReason") ?? "");
+    const details = String(data.get("reportDetails") ?? "").trim();
+    if (!["suspected_fraud","prohibited_item","misleading","duplicate","harassment","other"].includes(reason) || details.length < 10) {
+      toast.error("Escolha o motivo e descreva o problema com pelo menos 10 caracteres.");
+      return;
+    }
+    setBusy(true);
+    const { error } = await communityDb.from("listing_reports").insert({
+      listing_id: listing.id,
+      reporter_id: sessionUser.id,
+      reason,
+      details,
+    });
+    setBusy(false);
+    if (error) toast.error("Não foi possível enviar a denúncia.");
+    else { toast.success("Denúncia enviada à equipa de moderação."); setSelectedListing(null); }
+  }
+
   async function startPurchase(event: FormEvent<HTMLFormElement>, listing: Listing) {
     event.preventDefault();
     if (!sessionUser || !profileReady) { setShowLogin(true); toast.info("Entre na sua conta para iniciar a compra."); return; }
