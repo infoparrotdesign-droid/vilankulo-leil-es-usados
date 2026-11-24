@@ -1,0 +1,59 @@
+name: VilaShop - Deploy Supabase migrations
+
+on:
+  push:
+    branches:
+      - vilashop/rebuild-foundation
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/config.toml"
+      - ".github/workflows/vilashop-supabase-migrations.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vilashop-supabase-production-migrations
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Apply database migrations
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_ID: ibwasunbdqplanwhnexf
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate required GitHub secrets
+        shell: bash
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::Missing production environment secret SUPABASE_ACCESS_TOKEN"; exit 1; }
+          test -n "$SUPABASE_DB_PASSWORD" || { echo "::error::Missing production environment secret SUPABASE_DB_PASSWORD"; exit 1; }
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: latest
+
+      - name: Confirm target project
+        shell: bash
+        run: |
+          test "$(sed -n 's/^project_id = "\(.*\)"/\1/p' supabase/config.toml)" = "$SUPABASE_PROJECT_ID"
+          supabase link --project-ref "$SUPABASE_PROJECT_ID"
+
+      - name: Preview pending migrations
+        run: supabase db push --dry-run --remote="$SUPABASE_PROJECT_ID"
+
+      - name: Apply pending migrations
+        run: supabase db push --yes --remote="$SUPABASE_PROJECT_ID"
+
+      - name: Verify remote migration history
+        run: supabase migration list --remote="$SUPABASE_PROJECT_ID"
