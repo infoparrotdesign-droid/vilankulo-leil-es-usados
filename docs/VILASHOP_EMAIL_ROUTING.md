@@ -1,19 +1,47 @@
-# VilaShop — administração e encaminhamento de notificações
+# VilaShop — administração e notificações por email
 
-## Endereços
+## Destinatários e permissões
 
-- **Conta administrativa:** `info.parrotdesign@gmail.com`.
-- **Caixa de notificações:** `adminvilashop@gmail.com`.
-- **Destinatários das notificações gerais por email:** ambos os endereços acima.
+- **Conta remetente e única conta administrativa:** `info.parrotdesign@gmail.com`.
+- **Destinatário adicional:** `adminvilashop@gmail.com`.
+- Os dois recebem cópia das notificações administrativas.
+- O segundo endereço não recebe sessão, palavra-passe, papel de administrador nem acesso ao painel.
 
-Os dois endereços recebem cópia dos alertas gerais da plataforma quando o serviço de envio de email estiver activo. Isto não partilha sessões, palavras-passe nem permissões: apenas `info.parrotdesign@gmail.com` pode autenticar-se como administrador. O endereço `adminvilashop@gmail.com` é um destinatário de correio e não recebe papel administrativo.
+## Transporte Gmail gratuito
 
-## Estado técnico
+O envio usa a Gmail API com OAuth 2.0 e o âmbito mínimo `https://www.googleapis.com/auth/gmail.send`. A Edge Function `send-admin-notification` só aceita pedidos autenticados com o segredo interno `VILASHOP_MAILER_TOKEN`; os destinatários e o remetente são fixos no servidor. Nenhuma credencial Gmail fica no frontend ou no repositório.
 
-A lista de destinatários está centralizada em `src/lib/vilashop-config.ts`, através de `VILASHOP_NOTIFICATION_EMAILS`. A aplicação tem notificações internas para utilizadores, mas o repositório ainda não tem um transporte de email transaccional configurado para entregar alertas gerais a caixas externas.
+A função envia mensagens em nome de `info.parrotdesign@gmail.com` para ambos os destinatários. O Gmail aplica os seus próprios limites e políticas de envio.
 
-Para activar a entrega real, é necessário escolher e configurar um fornecedor de email (por exemplo, Resend ou SMTP), adicionar a respectiva chave/credencial como segredo protegido no ambiente GitHub/Supabase e implementar/testar o envio no backend. Não colocar credenciais no código, no frontend ou em commits. Até esse passo ser concluído, a lista de destinatários está definida no código, mas não deve ser apresentada como encaminhamento externo activo.
+## Configuração necessária na conta Google
+
+1. Entrar no [Google Cloud Console](https://console.cloud.google.com/) com `info.parrotdesign@gmail.com`.
+2. Criar um projecto Google Cloud chamado VilaShop Notifications.
+3. Em APIs & Services → Library, activar **Gmail API**.
+4. Configurar Google Auth Platform / OAuth consent screen. Seleccionar External e adicionar `info.parrotdesign@gmail.com` como utilizador de teste se a aplicação estiver em Testing.
+5. Em Credentials, criar um OAuth Client ID do tipo Web application. Adicionar `https://developers.google.com/oauthplayground` como Authorized redirect URI.
+6. Abrir [OAuth 2.0 Playground](https://developers.google.com/oauthplayground), abrir as definições (engrenagem), activar **Use your own OAuth credentials** e introduzir Client ID e Client Secret.
+7. No passo 1 do Playground, usar apenas o âmbito `https://www.googleapis.com/auth/gmail.send`, autorizar com `info.parrotdesign@gmail.com`; no passo 2, trocar o código por tokens e guardar o **refresh token**. Não partilhar o token no chat.
+8. No GitHub, abrir Settings → Secrets and variables → Actions → Environment secrets → `production` e criar:
+   - `GMAIL_CLIENT_ID`
+   - `GMAIL_CLIENT_SECRET`
+   - `GMAIL_REFRESH_TOKEN`
+9. Executar o workflow **VilaShop - Test direct PostgreSQL and deploy migrations** com a opção `configure_gmail=true`. O workflow envia as credenciais ao Supabase como secrets e deriva um token interno separado. Não activa nem aplica migrations.
+
+Se o consentimento OAuth estiver em Testing, os refresh tokens para âmbitos Gmail podem expirar ao fim de 7 dias. Para uso contínuo, configurar a aplicação como In production; o Google pode mostrar um aviso de aplicação não verificada ou exigir revisão conforme o estado e a utilização. Não conceder âmbitos Gmail mais amplos do que `gmail.send`.
+
+## Estado de implementação
+
+- [x] Destinatários fixos e separação entre email administrativo e caixa de notificações.
+- [x] Edge Function de envio Gmail API criada no GitHub.
+- [x] Segredo de chamada validado no servidor; credenciais não expostas ao browser.
+- [x] Workflow preparado para publicar a função e importar OAuth secrets do ambiente GitHub `production`.
+- [ ] Criar OAuth Client e obter refresh token na conta remetente.
+- [ ] Adicionar os três secrets Gmail no GitHub e executar `configure_gmail=true`.
+- [ ] Ligar os eventos administrativos do marketplace ao envio e testar entrega real nos dois destinatários.
+
+A função de envio não deve ser considerada operacional até os secrets serem configurados e o teste real de entrega ser concluído. O envio automático de eventos depende da integração dos eventos administrativos com a função; a simples existência da função não dispara emails por si só.
 
 ## Segurança
 
-A função de autorização da base de dados valida a sessão autenticada, o registo de administrador e o email confirmado autorizado. O trigger de autenticação concede o registo administrativo apenas ao email autorizado e remove-o se o email da conta mudar ou deixar de corresponder. O destinatário de notificações nunca é usado para conceder permissões.
+Nunca colocar credenciais em ficheiros versionados, variáveis públicas, mensagens de chat ou logs. Se um segredo for exposto, revogá-lo e gerar outro. A caixa `adminvilashop@gmail.com` é apenas destinatária; não deve ser adicionada à tabela de administradores.
