@@ -50,6 +50,20 @@ alter table public.listings add constraint auction_requires_end_time
   check ((listing_type='auction' and auction_ends_at is not null)
     or (listing_type in ('sale','negotiation') and auction_ends_at is null));
 
+drop policy if exists listings_public_active on public.listings;
+create policy listings_public_active on public.listings for select to anon, authenticated
+  using (status='active' or (status='ended' and listing_type='auction'));
+
+drop policy if exists marketplace_photos_read_active on storage.objects;
+create policy marketplace_photos_read_active on storage.objects for select to anon, authenticated
+using (
+  bucket_id='boladas-media' and exists (
+    select 1 from public.listings l
+    where l.photo_path=storage.objects.name
+      and (l.status='active' or (l.status='ended' and l.listing_type='auction'))
+  )
+);
+
 
 alter table public.listings drop constraint if exists listings_status_check;
 alter table public.listings add constraint listings_status_check
