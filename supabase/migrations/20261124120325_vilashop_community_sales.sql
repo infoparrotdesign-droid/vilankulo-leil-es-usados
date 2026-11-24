@@ -42,6 +42,14 @@ end;
 $;
 revoke execute on function public.create_profile_for_new_user() from public, anon, authenticated;
 
+alter table public.listings drop constraint if exists listings_listing_type_check;
+alter table public.listings add constraint listings_listing_type_check
+  check (listing_type in ('sale','auction','negotiation'));
+alter table public.listings drop constraint if exists auction_requires_end_time;
+alter table public.listings add constraint auction_requires_end_time
+  check ((listing_type='auction' and auction_ends_at is not null)
+    or (listing_type in ('sale','negotiation') and auction_ends_at is null));
+
 
 alter table public.listings drop constraint if exists listings_status_check;
 alter table public.listings add constraint listings_status_check
@@ -194,7 +202,7 @@ begin
   end if;
   if _amount is null or _amount <= 0 then raise exception 'Indique um valor válido.'; end if;
   select * into l from public.listings where id = _listing_id for update;
-  if not found or l.status <> 'active' or l.listing_type <> 'sale' then
+  if not found or l.status <> 'active' or l.listing_type <> 'negotiation' then
     raise exception 'Este anúncio não aceita propostas neste momento.';
   end if;
   if l.seller_id = uid then raise exception 'Não pode negociar o seu próprio anúncio.'; end if;
@@ -424,6 +432,8 @@ begin
     if final_price is null or not exists (
       select 1 from public.bids b where b.listing_id=l.id and b.bidder_id=uid and b.amount=final_price
     ) then raise exception 'Só o vencedor do leilão pode iniciar esta compra.'; end if;
+  elsif l.listing_type='negotiation' and _offer_id is null then
+    raise exception 'Este anúncio exige uma proposta aceite antes da compra.';
   elsif _offer_id is not null then
     select * into selected_offer from public.listing_offers o
       where o.id=_offer_id and o.listing_id=l.id and o.buyer_id=uid and o.seller_id=l.seller_id and o.status='accepted'
