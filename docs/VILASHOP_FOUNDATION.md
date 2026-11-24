@@ -33,6 +33,8 @@ O VilaShop é um marketplace moçambicano orientado à comunidade. Deve aproxima
 - O vendedor define o preço anunciado, que é exactamente o valor pago pelo comprador.
 - O VilaShop retém uma comissão de 10% desse valor e liquida 90% ao vendedor após a conclusão e validação da venda.
 - Antes de publicar, o vendedor vê uma simulação: preço anunciado, comissão de 10% e valor líquido que receberá.
+- O formulário inclui uma calculadora inversa opcional: o vendedor indica quanto deseja receber líquido e o sistema sugere o preço de anúncio necessário (valor líquido ÷ 0,90), sempre recomendando comparar com artigos semelhantes para não perder competitividade.
+- A calculadora não altera o preço automaticamente; só preenche o campo após o vendedor escolher explicitamente «Usar preço sugerido». A comissão só é retida quando a venda é concluída, nunca pela publicação.
 - Antes de pagar, o comprador vê o preço final sem taxa adicional de plataforma.
 - Em propostas, contrapropostas e leilões, a comissão é calculada sobre o preço final acordado ou lance vencedor.
 - Em propostas, contrapropostas e leilões, os valores apresentados são preços-base; a taxa é calculada sobre o valor final acordado/vencedor.
