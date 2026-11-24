@@ -125,11 +125,11 @@ function AdminPage() {
           <div className="flex flex-wrap items-start gap-4">
             {row.imageUrl && <img src={row.imageUrl} alt={row.title} className="h-28 w-28 rounded-lg border object-cover" />}
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-lg font-semibold">{row.title}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">{row.description}</p>
                 <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium">{row.status === "pending_review" ? (row.reviewed_at ? "Apto · aguarda as 6 horas" : "Em observação") : "Publicado"}</span>
               </div>
+              <p className="mt-1 text-sm text-muted-foreground">{row.description}</p>
               <p className="mt-2 text-xs text-muted-foreground">Vendedor: {row.seller_id.slice(0, 8)} · {row.listing_type === "auction" ? "Leilão" : "Venda directa"} · {new Intl.NumberFormat("pt-MZ").format(row.price)} MT</p>
             </div>
           </div>
