@@ -316,6 +316,63 @@ function AdminPage() {
             </div>
           )}
         </section>
+
+        <section className="mt-8">
+          <h2 className="mb-3 text-lg font-semibold">Pagamentos, entregas e liquidações</h2>
+          <div className="grid gap-3">
+            {sales.length === 0 ? <p className="rounded-xl border border-dashed bg-card p-5 text-sm text-muted-foreground">Ainda não existem vendas registadas.</p> : sales.map((sale) => (
+              <article key={sale.id} className="rounded-xl border bg-card p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2"><strong>Venda {sale.id.slice(0,8)}</strong><span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold">{sale.status}</span></div>
+                <p className="mt-1 text-xs text-muted-foreground">Artigo {sale.listing_id.slice(0,8)} · Comprador {sale.buyer_id.slice(0,8)} · Vendedor {sale.seller_id.slice(0,8)}</p>
+                <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3"><p>Valor: <strong>{Number(sale.agreed_price).toLocaleString("pt-MZ")} MT</strong></p><p>Comissão 5%: <strong>{Number(sale.commission_amount).toLocaleString("pt-MZ")} MT</strong></p><p>Líquido vendedor: <strong>{Number(sale.seller_net_amount).toLocaleString("pt-MZ")} MT</strong></p></div>
+                {sale.payment_reference && <p className="mt-2 text-xs text-muted-foreground">Referência: {sale.payment_reference}</p>}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {sale.status === "payment_reported" && <Button size="sm" disabled={busy} onClick={() => void runAdminAction("admin_verify_marketplace_payment", { _sale_id: sale.id }, "Pagamento confirmado manualmente.")}>Confirmar pagamento</Button>}
+                  {sale.status === "buyer_confirmed" && <Button size="sm" disabled={busy} onClick={() => void runAdminAction("admin_confirm_sale_delivery", { _sale_id: sale.id }, "Entrega validada; prazo de liquidação iniciado.")}>Validar entrega</Button>}
+                  {sale.status === "delivery_confirmed" && <div className="flex flex-wrap gap-2"><Input className="max-w-xs" value={adminNotes["payout-"+sale.id] ?? ""} onChange={(event) => setAdminNotes((current) => ({ ...current, ["payout-"+sale.id]: event.target.value }))} placeholder="Referência do pagamento ao vendedor" /><Button size="sm" disabled={busy || !(adminNotes["payout-"+sale.id] ?? "").trim()} onClick={() => void runAdminAction("admin_record_seller_payout", { _sale_id: sale.id, _payout_reference: adminNotes["payout-"+sale.id] }, "Liquidação ao vendedor registada.")}>Registar pagamento ao vendedor</Button></div>}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-8">
+          <h2 className="mb-3 text-lg font-semibold">Reclamações de transacções</h2>
+          <div className="grid gap-3">
+            {disputes.length === 0 ? <p className="rounded-xl border border-dashed bg-card p-5 text-sm text-muted-foreground">Não existem reclamações registadas.</p> : disputes.map((item) => (
+              <article key={item.id} className="rounded-xl border bg-card p-4">
+                <div className="flex flex-wrap justify-between gap-2"><strong>Reclamação {item.id.slice(0,8)}</strong><span className="text-xs text-muted-foreground">{item.status}</span></div>
+                <p className="mt-2 text-sm">{item.reason}</p>
+                {item.evidence_note && <p className="mt-1 text-xs text-muted-foreground">Provas: {item.evidence_note}</p>}
+                <Input className="mt-3" value={adminNotes[item.id] ?? ""} onChange={(event) => setAdminNotes((current) => ({ ...current, [item.id]: event.target.value }))} placeholder="Fundamente a decisão (mínimo 10 caracteres)" />
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button size="sm" disabled={busy || (adminNotes[item.id] ?? "").trim().length < 10} onClick={() => void runAdminAction("admin_resolve_sale_dispute", { _dispute_id: item.id, _resolution: "resolved_seller", _note: adminNotes[item.id] }, "Reclamação resolvida a favor do vendedor.")}>A favor do vendedor</Button>
+                  <Button size="sm" variant="destructive" disabled={busy || (adminNotes[item.id] ?? "").trim().length < 10} onClick={() => void runAdminAction("admin_resolve_sale_dispute", { _dispute_id: item.id, _resolution: "resolved_buyer", _note: adminNotes[item.id] }, "Reclamação resolvida a favor do comprador.")}>A favor do comprador</Button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-8">
+          <h2 className="mb-3 text-lg font-semibold">Denúncias de anúncios</h2>
+          <div className="grid gap-3">
+            {reports.length === 0 ? <p className="rounded-xl border border-dashed bg-card p-5 text-sm text-muted-foreground">Não existem denúncias registadas.</p> : reports.map((item) => (
+              <article key={item.id} className="rounded-xl border bg-card p-4">
+                <div className="flex flex-wrap justify-between gap-2"><strong>Denúncia {item.id.slice(0,8)} · {item.reason}</strong><span className="text-xs text-muted-foreground">{item.status}</span></div>
+                <p className="mt-2 text-sm">{item.details}</p>
+                <p className="mt-1 text-xs text-muted-foreground">Anúncio {item.listing_id.slice(0,8)} · Denunciante {item.reporter_id.slice(0,8)}</p>
+                <Input className="mt-3" value={adminNotes["report-"+item.id] ?? ""} onChange={(event) => setAdminNotes((current) => ({ ...current, ["report-"+item.id]: event.target.value }))} placeholder="Nota administrativa opcional" />
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" disabled={busy} onClick={() => void runAdminAction("admin_review_listing_report", { _report_id: item.id, _decision: "under_review", _note: adminNotes["report-"+item.id] ?? "" }, "Denúncia colocada em análise.")}>Em análise</Button>
+                  <Button size="sm" disabled={busy} onClick={() => void runAdminAction("admin_review_listing_report", { _report_id: item.id, _decision: "resolved", _note: adminNotes["report-"+item.id] ?? "" }, "Denúncia resolvida.")}>Resolver</Button>
+                  <Button size="sm" variant="destructive" disabled={busy} onClick={() => void runAdminAction("admin_review_listing_report", { _report_id: item.id, _decision: "dismissed", _note: adminNotes["report-"+item.id] ?? "" }, "Denúncia arquivada.")}>Arquivar</Button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
       </div>
     </main>
   );
