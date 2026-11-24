@@ -60,7 +60,7 @@ create index if not exists seller_follows_seller_idx on public.seller_follows(se
 alter table public.seller_follows enable row level security;
 grant select, insert, delete on public.seller_follows to authenticated;
 create policy seller_follows_read_own on public.seller_follows for select to authenticated
-  using (follower_id = (select auth.uid()) or seller_id = (select auth.uid()));
+  using (follower_id = (select auth.uid()));
 create policy seller_follows_insert_own on public.seller_follows for insert to authenticated
   with check (follower_id = (select auth.uid()) and follower_id <> seller_id);
 create policy seller_follows_delete_own on public.seller_follows for delete to authenticated
@@ -260,6 +260,28 @@ end;
 $$;
 revoke all on function public.accept_listing_counteroffer(uuid) from public, anon;
 grant execute on function public.accept_listing_counteroffer(uuid) to authenticated;
+
+-- Automatically close auctions when their published deadline is reached.
+create or replace function public.end_due_vilashop_auctions()
+returns integer language plpgsql set search_path = ''
+as $
+declare ended_count integer;
+begin
+  update public.listings set status='ended'
+  where status='active' and listing_type='auction' and auction_ends_at <= now();
+  get diagnostics ended_count = row_count;
+  return ended_count;
+end;
+$;
+revoke all on function public.end_due_vilashop_auctions() from public, anon, authenticated;
+grant execute on function public.end_due_vilashop_auctions() to service_role;
+do $
+begin
+  if not exists (select 1 from cron.job where jobname='vilashop-end-due-auctions') then
+    perform cron.schedule('vilashop-end-due-auctions','* * * * *','select public.end_due_vilashop_auctions();');
+  end if;
+end;
+$;
 
 -- Public bid history deliberately excludes bidder IDs and profile details.
 create or replace function public.get_listing_bid_history(_listing_id uuid)
