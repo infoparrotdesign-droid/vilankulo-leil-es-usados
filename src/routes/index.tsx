@@ -38,6 +38,7 @@ import chairPhoto from "@/assets/wooden-chair.jpg";
 
 const APP_NAME = "VilaShop";
 const imageBucket = "boladas-media";
+const communityDb = supabase as unknown as { from: (table: string) => any; rpc: (name: string, args?: Record<string, unknown>) => Promise<{ data: any; error: { message: string } | null }> };
 const listingCategories = ["Eletrónicos", "Casa", "Moda", "Desporto", "Veículos", "Outros"] as const;
 const categories = ["Todos", ...listingCategories] as const;
 type Category = (typeof categories)[number];
@@ -51,6 +52,8 @@ type SellerListing = {
   status: string;
   created_at: string;
 };
+
+type PublicBid = { bid_number: number; amount: number; placed_at: string };
 
 type Listing = {
   id: string;
@@ -212,6 +215,9 @@ function Marketplace() {
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [sortBy, setSortBy] = useState<"recent" | "price">("recent");
   const [busy, setBusy] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isFollowingSeller, setIsFollowingSeller] = useState(false);
+  const [publicBidHistory, setPublicBidHistory] = useState<PublicBid[]>([]);
 
   useEffect(() => {
     let current = true;
@@ -282,6 +288,32 @@ function Marketplace() {
       current = false;
     };
   }, []);
+
+  useEffect(() => {
+    let current = true;
+    setIsFavorite(false);
+    setIsFollowingSeller(false);
+    setPublicBidHistory([]);
+    if (!selectedListing || selectedListing.isSample) return;
+    void (async () => {
+      const historyRequest = communityDb.rpc("get_listing_bid_history", { _listing_id: selectedListing.id });
+      if (sessionUser) {
+        const [favoriteResult, followResult, historyResult] = await Promise.all([
+          communityDb.from("listing_favorites").select("id").eq("user_id", sessionUser.id).eq("listing_id", selectedListing.id).maybeSingle(),
+          communityDb.from("seller_follows").select("id").eq("follower_id", sessionUser.id).eq("seller_id", selectedListing.seller_id).maybeSingle(),
+          historyRequest,
+        ]);
+        if (!current) return;
+        setIsFavorite(Boolean(favoriteResult.data));
+        setIsFollowingSeller(Boolean(followResult.data));
+        if (!historyResult.error) setPublicBidHistory((historyResult.data ?? []) as PublicBid[]);
+      } else {
+        const historyResult = await historyRequest;
+        if (current && !historyResult.error) setPublicBidHistory((historyResult.data ?? []) as PublicBid[]);
+      }
+    })();
+    return () => { current = false; };
+  }, [selectedListing?.id, sessionUser?.id]);
 
   const sellerId = sessionUser?.id;
   useEffect(() => {
@@ -513,6 +545,72 @@ function Marketplace() {
     document.getElementById("artigos")?.scrollIntoView({ behavior: "smooth" });
   }
 
+  async function toggleFavorite(listing: Listing) {
+    if (!sessionUser || !profileReady) { setShowLogin(true); toast.info("Entre na sua conta para guardar artigos."); return; }
+    if (listing.isSample) { toast.info("Os artigos de exemplo não podem ser guardados."); return; }
+    setBusy(true);
+    const result = isFavorite
+      ? await communityDb.from("listing_favorites").delete().eq("user_id", sessionUser.id).eq("listing_id", listing.id)
+      : await communityDb.from("listing_favorites").insert({ user_id: sessionUser.id, listing_id: listing.id });
+    setBusy(false);
+    if (result.error) toast.error("Não foi possível actualizar os seus favoritos.");
+    else { setIsFavorite(!isFavorite); toast.success(isFavorite ? "Artigo removido dos favoritos." : "Artigo guardado nos favoritos."); }
+  }
+
+  async function toggleSellerFollow(listing: Listing) {
+    if (!sessionUser || !profileReady) { setShowLogin(true); toast.info("Entre na sua conta para seguir vendedores."); return; }
+    if (listing.isSample) { toast.info("Este vendedor de exemplo não pode ser seguido."); return; }
+    if (listing.seller_id === sessionUser.id) { toast.info("Este é o seu próprio anúncio."); return; }
+    setBusy(true);
+    const result = isFollowingSeller
+      ? await communityDb.from("seller_follows").delete().eq("follower_id", sessionUser.id).eq("seller_id", listing.seller_id)
+      : await communityDb.from("seller_follows").insert({ follower_id: sessionUser.id, seller_id: listing.seller_id });
+    setBusy(false);
+    if (result.error) toast.error("Não foi possível actualizar os vendedores seguidos.");
+    else { setIsFollowingSeller(!isFollowingSeller); toast.success(isFollowingSeller ? "Deixou de seguir este vendedor." : "Agora segue este vendedor."); }
+  }
+
+  async function submitOffer(event: FormEvent<HTMLFormElement>, listing: Listing) {
+    event.preventDefault();
+    if (!sessionUser || !profileReady) { setShowLogin(true); toast.info("Entre na sua conta para fazer uma proposta."); return; }
+    if (listing.isSample) { toast.info("Este anúncio é apenas um exemplo."); return; }
+    const data = new FormData(event.currentTarget);
+    const amount = z.coerce.number().positive().safeParse(data.get("offerAmount"));
+    if (!amount.success) { toast.error("Indique um valor válido para a proposta."); return; }
+    setBusy(true);
+    const { error } = await communityDb.rpc("create_listing_offer", {
+      _listing_id: listing.id,
+      _amount: amount.data,
+      _message: String(data.get("offerMessage") ?? ""),
+    });
+    setBusy(false);
+    if (error) toast.error(error.message);
+    else { toast.success("Proposta enviada ao vendedor."); setSelectedListing(null); }
+  }
+
+  async function startPurchase(event: FormEvent<HTMLFormElement>, listing: Listing) {
+    event.preventDefault();
+    if (!sessionUser || !profileReady) { setShowLogin(true); toast.info("Entre na sua conta para iniciar a compra."); return; }
+    if (listing.isSample) { toast.info("Este anúncio é apenas um exemplo."); return; }
+    if (listing.listing_type === "auction") { toast.info("A compra de leilão só fica disponível após o encerramento e confirmação do vencedor."); return; }
+    const data = new FormData(event.currentTarget);
+    const deliveryMethod = String(data.get("deliveryMethod"));
+    if (deliveryMethod !== "in_person" && deliveryMethod !== "seller_delivery") { toast.error("Escolha o método de entrega."); return; }
+    setBusy(true);
+    const { error } = await communityDb.rpc("create_marketplace_sale", {
+      _listing_id: listing.id,
+      _delivery_method: deliveryMethod,
+      _offer_id: null,
+    });
+    setBusy(false);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Pedido criado. Acompanhe o pagamento e a entrega na sua área de comunidade.");
+      setSelectedListing(null);
+      window.location.href = "/conta";
+    }
+  }
+
   async function showSellerContact(listing: Listing) {
     if (!sessionUser || !profileReady) {
       setSelectedListing(null);
@@ -587,6 +685,7 @@ function Marketplace() {
             {sessionUser && profileReady ? (
               <>
                 <Button type="button" variant="ghost" className="market-account" onClick={() => setShowMyListings(true)}>Os meus anúncios</Button>
+                <a href="/conta" className="market-account">A minha comunidade</a>
                 {sessionUser.email?.toLowerCase() === "adminvilashop@gmail.com" && <Link to="/admin" className="market-account">Administração</Link>}
                 <Button type="button" variant="ghost" className="market-account" onClick={() => void signOut()} aria-label="Sair da conta">
                   <UserRound size={17} /> <span>{sessionUser.user_metadata["full_name"]?.toString().split(" ")[0] || "A minha conta"}</span>
@@ -767,9 +866,11 @@ function Marketplace() {
             <DialogHeader className="market-form-header"><div className="market-product-flags"><span className={`market-item-tag ${selectedListing.listing_type === "auction" ? "tag-auction" : "tag-sale"}`}>{selectedListing.listing_type === "auction" ? <><Gavel size={12} /> Leilão</> : "À venda"}</span>{selectedListing.isSample && <span className="market-sample-label">Exemplo</span>}</div><DialogTitle>{selectedListing.title}</DialogTitle><DialogDescription>{selectedListing.description}</DialogDescription></DialogHeader>
             <div className="market-detail-price"><span>{selectedListing.listing_type === "auction" ? "Valor actual" : "Preço"}</span><strong>{formatPrice(selectedListing.highest_bid ?? selectedListing.price)}</strong><small><MapPin size={13} /> Vilankulo</small></div>
             <div className="market-condition-row"><span>Estado</span><strong>{selectedListing.item_condition}</strong></div>
+            {!selectedListing.isSample && <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" disabled={busy} onClick={() => void toggleFavorite(selectedListing)}><Heart className="mr-2 size-4" fill={isFavorite ? "currentColor" : "none"} />{isFavorite ? "Guardado" : "Guardar artigo"}</Button><Button type="button" variant="outline" disabled={busy || selectedListing.seller_id === sessionUser?.id} onClick={() => void toggleSellerFollow(selectedListing)}><UserRound className="mr-2 size-4" />{isFollowingSeller ? "A seguir vendedor" : "Seguir vendedor"}</Button></div>}
+            {selectedListing.listing_type === "auction" && publicBidHistory.length > 0 && <section className="rounded-xl border p-3"><h3 className="font-semibold">Histórico de propostas</h3><p className="mb-2 text-xs text-muted-foreground">Os participantes permanecem anónimos para proteger a sua privacidade.</p><div className="grid gap-2">{publicBidHistory.map((bid) => <div key={bid.bid_number} className="flex justify-between gap-3 text-sm"><span>Participante {String(bid.bid_number).padStart(2, "0")}</span><strong>{formatPrice(bid.amount)}</strong><span className="text-xs text-muted-foreground">{new Date(bid.placed_at).toLocaleString("pt-MZ")}</span></div>)}</div></section>}
             {selectedListing.listing_type === "auction" ? (
               <form className="market-form market-bid-form" onSubmit={(event) => void submitBid(event, selectedListing)}><FormField label="A sua oferta (meticais)" htmlFor="bid-amount"><Input id="bid-amount" type="number" name="amount" min={selectedListing.highest_bid ? selectedListing.highest_bid + 1 : selectedListing.price} placeholder="Introduza o seu lance" required step="0.01" /></FormField><p>O seu lance deve superar {formatPrice(currentBid)}.</p><Button type="submit" disabled={busy} className="market-form-submit"><Gavel size={16} />{busy ? "A enviar…" : "Fazer um lance"}</Button></form>
-            ) : <Button type="button" className="market-form-submit market-contact-button" onClick={() => void showSellerContact(selectedListing)}><ShoppingBag size={16} /> Contactar o vendedor</Button>}
+            ) : <div className="grid gap-3"><form className="market-form" onSubmit={(event) => void submitOffer(event, selectedListing)}><FormField label="A sua proposta (meticais)" htmlFor="offer-amount"><Input id="offer-amount" type="number" name="offerAmount" min="1" step="0.01" placeholder="Quanto pretende pagar?" required /></FormField><FormField label="Mensagem ao vendedor (opcional)" htmlFor="offer-message"><Input id="offer-message" name="offerMessage" maxLength={500} placeholder="Escreva uma nota curta" /></FormField><Button type="submit" variant="outline" disabled={busy}>Enviar proposta</Button></form><form className="market-form" onSubmit={(event) => void startPurchase(event, selectedListing)}><FormField label="Como prefere receber o artigo?" htmlFor="delivery-method"><select id="delivery-method" name="deliveryMethod" className="market-form-select" defaultValue="in_person"><option value="in_person">Encontro presencial</option><option value="seller_delivery">Entrega pelo vendedor</option></select></FormField><Button type="submit" className="market-form-submit" disabled={busy}><ShoppingBag size={16} /> Iniciar compra</Button></form><Button type="button" variant="ghost" onClick={() => void showSellerContact(selectedListing)}>Contactar o vendedor</Button></div>}
           </>}
         </DialogContent>
       </Dialog>
