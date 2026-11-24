@@ -81,19 +81,6 @@ jobs:
           supabase secrets set --yes --project-ref "$SUPABASE_PROJECT_ID" "VILASHOP_CLEANUP_TOKEN=$CLEANUP_TOKEN"
           supabase functions deploy cleanup-listing-photos --project-ref "$SUPABASE_PROJECT_ID" --yes
 
-      - name: Run initial safe photo cleanup sweep
-        if: ${{ github.event_name == 'push' }}
-        shell: bash
-        run: |
-          CLEANUP_TOKEN="$(printf '%s' "$SUPABASE_ACCESS_TOKEN" | sha256sum | cut -d' ' -f1)"
-          curl --fail-with-body --silent --show-error \
-            --request POST \
-            --header "x-vilashop-cleanup-token: $CLEANUP_TOKEN" \
-            --header "Content-Type: application/json" \
-            --data '{}' \
-            "https://ibwasunbdqplanwhnexf.supabase.co/functions/v1/cleanup-listing-photos"
-
-
       - name: Deploy protected Gmail notification function
         if: ${{ github.event_name == 'push' }}
         run: supabase functions deploy send-admin-notification --project-ref "$SUPABASE_PROJECT_ID" --yes
