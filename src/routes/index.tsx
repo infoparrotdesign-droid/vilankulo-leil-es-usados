@@ -426,7 +426,7 @@ function Marketplace() {
       price: parsed.data.price,
       auction_ends_at: auctionEndsAt,
       photo_path: filePath,
-    });
+    }).select("id, title, status, submitted_at, publish_after, review_note").single();
     setBusy(false);
     if (error) {
       await supabase.storage.from(imageBucket).remove([filePath]);
