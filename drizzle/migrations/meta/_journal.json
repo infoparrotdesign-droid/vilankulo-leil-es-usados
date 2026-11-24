@@ -36,6 +36,13 @@
       "when": 1795511011926,
       "tag": "0004_private_listing_photo_review_access",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795511391458,
+      "tag": "0005_rls_policy_performance_and_fk_indexes",
+      "breakpoints": true
     }
   ]
 }
