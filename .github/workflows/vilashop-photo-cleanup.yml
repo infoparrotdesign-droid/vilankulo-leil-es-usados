@@ -1,4 +1,5 @@
 name: VilaShop - Deploy photo cleanup function
+# Deploy on source changes; run the cleanup worker hourly.
 
 on:
   push:
