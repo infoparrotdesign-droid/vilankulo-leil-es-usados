@@ -13,6 +13,9 @@ type AdminListing = {
   submitted_at: string | null;
   publish_after: string | null;
   review_note: string | null;
+  reviewed_at: string | null;
+  photo_path: string | null;
+  imageUrl: string | null;
   seller_id: string;
 };
 
@@ -31,7 +34,7 @@ function AdminPage() {
   const loadQueue = useCallback(async () => {
     const { data, error } = await supabase
       .from("listings")
-      .select("id, title, description, status, price, listing_type, submitted_at, publish_after, review_note, seller_id")
+      .select("id, title, description, status, price, listing_type, submitted_at, publish_after, review_note, reviewed_at, photo_path, seller_id")
       .in("status", ["pending_review", "active"])
       .order("submitted_at", { ascending: true })
       .limit(100);
@@ -39,7 +42,13 @@ function AdminPage() {
       toast.error("Não foi possível carregar a fila de moderação.");
       return;
     }
-    setRows(data ?? []);
+    const listingRows = data ?? [];
+    const paths = listingRows.flatMap((row) => row.photo_path ? [row.photo_path] : []);
+    const signed = paths.length
+      ? await supabase.storage.from("boladas-media").createSignedUrls(paths, 3600)
+      : { data: [] };
+    const urls = new Map(paths.map((path, index) => [path, signed.data?.[index]?.signedUrl ?? null]));
+    setRows(listingRows.map((row) => ({ ...row, imageUrl: row.photo_path ? urls.get(row.photo_path) ?? null : null })));
   }, []);
 
   useEffect(() => {
@@ -113,13 +122,16 @@ function AdminPage() {
     <section className="space-y-4">
       {rows.length === 0 ? <div className="rounded-xl border p-6 text-sm text-muted-foreground">Não há anúncios pendentes nem anúncios activos para moderação.</div> : rows.map((row) => (
         <article key={row.id} className="space-y-3 rounded-xl border p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold">{row.title}</h2>
+          <div className="flex flex-wrap items-start gap-4">
+            {row.imageUrl && <img src={row.imageUrl} alt={row.title} className="h-28 w-28 rounded-lg border object-cover" />}
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <h2 className="text-lg font-semibold">{row.title}</h2>
               <p className="mt-1 text-sm text-muted-foreground">{row.description}</p>
+                <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium">{row.status === "pending_review" ? (row.reviewed_at ? "Apto · aguarda as 6 horas" : "Em observação") : "Publicado"}</span>
+              </div>
               <p className="mt-2 text-xs text-muted-foreground">Vendedor: {row.seller_id.slice(0, 8)} · {row.listing_type === "auction" ? "Leilão" : "Venda directa"} · {new Intl.NumberFormat("pt-MZ").format(row.price)} MT</p>
             </div>
-            <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium">{row.status === "pending_review" ? "Em observação" : "Publicado"}</span>
           </div>
           {row.submitted_at && <p className="text-xs text-muted-foreground">Enviado: {new Date(row.submitted_at).toLocaleString("pt-MZ")} {row.publish_after ? "· Publicação prevista: " + new Date(row.publish_after).toLocaleString("pt-MZ") : ""}</p>}
           <textarea
