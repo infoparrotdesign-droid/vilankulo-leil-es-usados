@@ -25,8 +25,8 @@ type Sale = {
   buyer_id: string;
   seller_id: string;
   agreed_price: number;
-  commission_amount: number;
-  seller_net_amount: number;
+  commission_amount: number | null;
+  seller_net_amount: number | null;
   status: string;
   delivery_method: string;
   buyer_confirmation_deadline: string | null;
@@ -217,8 +217,8 @@ function AccountPage() {
               </div>
               <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
                 <p>Preço: <strong>{sale.agreed_price.toLocaleString("pt-MZ")} MT</strong></p>
-                <p>Comissão (5%): <strong>{sale.commission_amount.toLocaleString("pt-MZ")} MT</strong></p>
-                <p>Vendedor recebe: <strong>{sale.seller_net_amount.toLocaleString("pt-MZ")} MT</strong></p>
+                <p>Comissão: <strong>{sale.commission_amount == null ? "Por definir" : `${sale.commission_amount.toLocaleString("pt-MZ")} MT`}</strong></p>
+                <p>Vendedor recebe: <strong>{sale.seller_net_amount == null ? "Por definir" : `${sale.seller_net_amount.toLocaleString("pt-MZ")} MT`}</strong></p>
               </div>
               {sale.status === "awaiting_payment" && sale.buyer_id === userId && (
                 <form className="mt-4 grid gap-3 rounded-lg bg-muted/60 p-3 sm:grid-cols-3" onSubmit={(event) => void reportPayment(event, sale.id)}>
