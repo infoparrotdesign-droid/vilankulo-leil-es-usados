@@ -67,7 +67,7 @@ jobs:
         shell: bash
         run: |
           supabase secrets set --yes --project-ref "$SUPABASE_PROJECT_ID" "VILASHOP_CLEANUP_TOKEN=$SUPABASE_ACCESS_TOKEN"
-          supabase functions deploy cleanup-listing-photos --project-ref "$SUPABASE_PROJECT_ID" --yes
+          supabase functions deploy cleanup-listing-photos --project-ref "$SUPABASE_PROJECT_ID"
 
       - name: Apply pending migrations only when explicitly requested
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.apply_migrations == true }}
