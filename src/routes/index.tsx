@@ -66,6 +66,7 @@ type Listing = {
   price: number;
   highest_bid: number | null;
   photo_path: string | null;
+  status: string;
   imageUrl: string | null;
   isSample?: boolean;
 };
@@ -81,6 +82,7 @@ type MarketplaceListingRow = {
   price: number;
   highest_bid: number | null;
   photo_path: string | null;
+  status: string;
 };
 
 function isListingCategory(value: string): value is ListingCategory {
@@ -111,6 +113,7 @@ function toMarketplaceListing(row: MarketplaceListingRow, imageUrl: string | nul
     price: row.price,
     highest_bid: row.highest_bid,
     photo_path: row.photo_path,
+    status: row.status,
     imageUrl,
   };
 }
@@ -127,6 +130,7 @@ const sampleItems: Listing[] = [
     price: 8500,
     highest_bid: null,
     photo_path: null,
+    status: "active",
     imageUrl: bicyclePhoto,
     isSample: true,
   },
@@ -262,8 +266,8 @@ function Marketplace() {
     void (async () => {
       const { data, error } = await supabase
         .from("listings")
-        .select("id, seller_id, title, description, category, item_condition, listing_type, price, highest_bid, photo_path, created_at")
-        .eq("status", "active")
+        .select("id, seller_id, title, description, category, item_condition, listing_type, price, highest_bid, photo_path, status, created_at")
+        .in("status", ["active", "ended"])
         .order("created_at", { ascending: false })
         .limit(48);
 
@@ -529,8 +533,8 @@ function Marketplace() {
     toast.success("Anúncio publicado com sucesso.");
     const { data: refreshed, error: refreshError } = await supabase
       .from("listings")
-      .select("id, seller_id, title, description, category, item_condition, listing_type, price, highest_bid, photo_path")
-      .eq("status", "active")
+      .select("id, seller_id, title, description, category, item_condition, listing_type, price, highest_bid, photo_path, status")
+      .in("status", ["active", "ended"])
       .order("created_at", { ascending: false })
       .limit(48);
     if (refreshError) return;
@@ -620,7 +624,7 @@ function Marketplace() {
     event.preventDefault();
     if (!sessionUser || !profileReady) { setShowLogin(true); toast.info("Entre na sua conta para iniciar a compra."); return; }
     if (listing.isSample) { toast.info("Este anúncio é apenas um exemplo."); return; }
-    if (listing.listing_type === "auction") { toast.info("A compra de leilão só fica disponível após o encerramento e confirmação do vencedor."); return; }
+    if (listing.listing_type === "auction" && listing.status !== "ended") { toast.info("A compra do leilão só fica disponível após o encerramento."); return; }
     const data = new FormData(event.currentTarget);
     const deliveryMethod = String(data.get("deliveryMethod"));
     if (deliveryMethod !== "in_person" && deliveryMethod !== "seller_delivery") { toast.error("Escolha o método de entrega."); return; }
@@ -681,8 +685,8 @@ function Marketplace() {
       setSelectedListing(null);
       const { data: updated } = await supabase
         .from("listings")
-        .select("id, seller_id, title, description, category, item_condition, listing_type, price, highest_bid, photo_path")
-        .eq("status", "active")
+        .select("id, seller_id, title, description, category, item_condition, listing_type, price, highest_bid, photo_path, status")
+        .in("status", ["active", "ended"])
         .order("created_at", { ascending: false })
         .limit(48);
       if (updated) setLiveListings(updated.flatMap((item) => {
@@ -891,14 +895,14 @@ function Marketplace() {
         <DialogContent className="market-dialog-content market-product-dialog">
           {selectedListing && <>
             {selectedListing.imageUrl && <img src={selectedListing.imageUrl} alt={selectedListing.title} className="market-detail-image" width={816} height={816} />}
-            <DialogHeader className="market-form-header"><div className="market-product-flags"><span className={`market-item-tag ${selectedListing.listing_type === "auction" ? "tag-auction" : "tag-sale"}`}>{selectedListing.listing_type === "auction" ? <><Gavel size={12} /> Leilão</> : selectedListing.listing_type === "negotiation" ? "Negociável" : "À venda"}</span>{selectedListing.isSample && <span className="market-sample-label">Exemplo</span>}</div><DialogTitle>{selectedListing.title}</DialogTitle><DialogDescription>{selectedListing.description}</DialogDescription></DialogHeader>
+            <DialogHeader className="market-form-header"><div className="market-product-flags"><span className={`market-item-tag ${selectedListing.listing_type === "auction" ? "tag-auction" : "tag-sale"}`}>{selectedListing.listing_type === "auction" ? <><Gavel size={12} /> {selectedListing.status === "ended" ? "Leilão encerrado" : "Leilão"}</> : selectedListing.listing_type === "negotiation" ? "Negociável" : "À venda"}</span>{selectedListing.isSample && <span className="market-sample-label">Exemplo</span>}</div><DialogTitle>{selectedListing.title}</DialogTitle><DialogDescription>{selectedListing.description}</DialogDescription></DialogHeader>
             <div className="market-detail-price"><span>{selectedListing.listing_type === "auction" ? "Valor actual" : "Preço"}</span><strong>{formatPrice(selectedListing.highest_bid ?? selectedListing.price)}</strong><small><MapPin size={13} /> Vilankulo</small></div>
             <div className="market-condition-row"><span>Estado</span><strong>{selectedListing.item_condition}</strong></div>
             {!selectedListing.isSample && <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" disabled={busy} onClick={() => void toggleFavorite(selectedListing)}><Heart className="mr-2 size-4" fill={isFavorite ? "currentColor" : "none"} />{isFavorite ? "Guardado" : "Guardar artigo"}</Button><Button type="button" variant="outline" disabled={busy || selectedListing.seller_id === sessionUser?.id} onClick={() => void toggleSellerFollow(selectedListing)}><UserRound className="mr-2 size-4" />{isFollowingSeller ? "A seguir vendedor" : "Seguir vendedor"}</Button></div>}
             {selectedListing.listing_type === "auction" && publicBidHistory.length > 0 && <section className="rounded-xl border p-3"><h3 className="font-semibold">Histórico de propostas</h3><p className="mb-2 text-xs text-muted-foreground">Os participantes permanecem anónimos para proteger a sua privacidade.</p><div className="grid gap-2">{publicBidHistory.map((bid) => <div key={bid.bid_number} className="flex justify-between gap-3 text-sm"><span>Participante {String(bid.bid_number).padStart(2, "0")}</span><strong>{formatPrice(bid.amount)}</strong><span className="text-xs text-muted-foreground">{new Date(bid.placed_at).toLocaleString("pt-MZ")}</span></div>)}</div></section>}
             {selectedListing.listing_type === "auction" ? (
               <form className="market-form market-bid-form" onSubmit={(event) => void submitBid(event, selectedListing)}><FormField label="A sua oferta (meticais)" htmlFor="bid-amount"><Input id="bid-amount" type="number" name="amount" min={selectedListing.highest_bid ? selectedListing.highest_bid + 1 : selectedListing.price} placeholder="Introduza o seu lance" required step="0.01" /></FormField><p>O seu lance deve superar {formatPrice(currentBid)}.</p><Button type="submit" disabled={busy} className="market-form-submit"><Gavel size={16} />{busy ? "A enviar…" : "Fazer um lance"}</Button></form>
-            ) : selectedListing.listing_type === "negotiation" ? <div className="grid gap-3"><form className="market-form" onSubmit={(event) => void submitOffer(event, selectedListing)}><FormField label="A sua proposta (meticais)" htmlFor="offer-amount"><Input id="offer-amount" type="number" name="offerAmount" min="1" step="0.01" placeholder="Quanto pretende pagar?" required /></FormField><FormField label="Mensagem ao vendedor (opcional)" htmlFor="offer-message"><Input id="offer-message" name="offerMessage" maxLength={500} placeholder="Escreva uma nota curta" /></FormField><Button type="submit" variant="outline" disabled={busy}>Enviar proposta</Button></form><Button type="button" variant="ghost" onClick={() => void showSellerContact(selectedListing)}>Contactar o vendedor</Button></div> : <div className="grid gap-3"><form className="market-form" onSubmit={(event) => void startPurchase(event, selectedListing)}><FormField label="Como prefere receber o artigo?" htmlFor="delivery-method"><select id="delivery-method" name="deliveryMethod" className="market-form-select" defaultValue="in_person"><option value="in_person">Encontro presencial</option><option value="seller_delivery">Entrega pelo vendedor</option></select></FormField><Button type="submit" className="market-form-submit" disabled={busy}><ShoppingBag size={16} /> Iniciar compra</Button></form><Button type="button" variant="ghost" onClick={() => void showSellerContact(selectedListing)}>Contactar o vendedor</Button></div>}
+            ) : selectedListing.listing_type === "auction" && selectedListing.status === "ended" ? <div className="grid gap-3"><p className="text-sm text-muted-foreground">Leilão encerrado. Apenas o vencedor pode iniciar a compra.</p><form className="market-form" onSubmit={(event) => void startPurchase(event, selectedListing)}><FormField label="Como prefere receber o artigo?" htmlFor="auction-delivery-method"><select id="auction-delivery-method" name="deliveryMethod" className="market-form-select" defaultValue="in_person"><option value="in_person">Encontro presencial</option><option value="seller_delivery">Entrega pelo vendedor</option></select></FormField><Button type="submit" className="market-form-submit" disabled={busy}><ShoppingBag size={16} /> Confirmar compra como vencedor</Button></form></div> : selectedListing.listing_type === "negotiation" ? <div className="grid gap-3"><form className="market-form" onSubmit={(event) => void submitOffer(event, selectedListing)}><FormField label="A sua proposta (meticais)" htmlFor="offer-amount"><Input id="offer-amount" type="number" name="offerAmount" min="1" step="0.01" placeholder="Quanto pretende pagar?" required /></FormField><FormField label="Mensagem ao vendedor (opcional)" htmlFor="offer-message"><Input id="offer-message" name="offerMessage" maxLength={500} placeholder="Escreva uma nota curta" /></FormField><Button type="submit" variant="outline" disabled={busy}>Enviar proposta</Button></form><Button type="button" variant="ghost" onClick={() => void showSellerContact(selectedListing)}>Contactar o vendedor</Button></div> : <div className="grid gap-3"><form className="market-form" onSubmit={(event) => void startPurchase(event, selectedListing)}><FormField label="Como prefere receber o artigo?" htmlFor="delivery-method"><select id="delivery-method" name="deliveryMethod" className="market-form-select" defaultValue="in_person"><option value="in_person">Encontro presencial</option><option value="seller_delivery">Entrega pelo vendedor</option></select></FormField><Button type="submit" className="market-form-submit" disabled={busy}><ShoppingBag size={16} /> Iniciar compra</Button></form><Button type="button" variant="ghost" onClick={() => void showSellerContact(selectedListing)}>Contactar o vendedor</Button></div>}
           </>}
         </DialogContent>
       </Dialog>
@@ -912,7 +916,7 @@ function ListingCard({ listing, onOpen }: { listing: Listing; onOpen: () => void
       <button type="button" className="market-card-open" onClick={onOpen} aria-label={`Ver anúncio: ${listing.title}`}>
         <span className="market-card-photo-wrap">
           {listing.imageUrl ? <img src={listing.imageUrl} alt={listing.title} className="market-card-photo" loading="lazy" width={816} height={816} /> : <span className="market-missing-photo"><ImagePlus size={28} /></span>}
-          <span className={`market-item-tag ${listing.listing_type === "auction" ? "tag-auction" : "tag-sale"}`}>{listing.listing_type === "auction" ? <><Gavel size={12} /> Leilão</> : listing.listing_type === "negotiation" ? "Negociável" : "À venda"}</span>
+          <span className={`market-item-tag ${listing.listing_type === "auction" ? "tag-auction" : "tag-sale"}`}>{listing.listing_type === "auction" ? <><Gavel size={12} /> {listing.status === "ended" ? "Leilão encerrado" : "Leilão"}</> : listing.listing_type === "negotiation" ? "Negociável" : "À venda"}</span>
           {listing.isSample && <span className="market-sample-label">Exemplo</span>}
           <span className="market-card-heart" aria-hidden="true"><Heart size={16} /></span>
         </span>
