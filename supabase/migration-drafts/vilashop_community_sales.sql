@@ -7,6 +7,41 @@ alter table public.profiles
   add column if not exists seller_kind text not null default 'individual'
   check (seller_kind in ('individual','business'));
 
+create or replace function public.create_profile_for_new_user()
+returns trigger language plpgsql security definer set search_path = public
+as $
+declare
+  supplied_birth_date date;
+  supplied_name text;
+  supplied_phone text;
+  supplied_address text;
+  supplied_seller_kind text;
+begin
+  supplied_birth_date := nullif(new.raw_user_meta_data ->> 'birth_date', '')::date;
+  supplied_name := nullif(btrim(new.raw_user_meta_data ->> 'full_name'), '');
+  supplied_phone := nullif(btrim(new.raw_user_meta_data ->> 'phone'), '');
+  supplied_address := nullif(btrim(new.raw_user_meta_data ->> 'address'), '');
+  supplied_seller_kind := case when new.raw_user_meta_data ->> 'seller_kind' = 'business' then 'business' else 'individual' end;
+
+  if supplied_birth_date is null and supplied_name is null and supplied_phone is null and supplied_address is null then
+    return new;
+  end if;
+  if supplied_birth_date is null or supplied_birth_date > (current_date - interval '18 years')::date then
+    raise exception 'A inscrição está disponível apenas para maiores de 18 anos.';
+  end if;
+  if supplied_name is null or char_length(supplied_name) not between 1 and 100
+     or supplied_phone is null or char_length(supplied_phone) not between 5 and 30
+     or supplied_address is null or char_length(supplied_address) not between 2 and 300 then
+    raise exception 'Preencha correctamente os dados obrigatórios do perfil.';
+  end if;
+  insert into public.profiles (id,display_name,phone,address,birth_date,seller_kind)
+  values (new.id,supplied_name,supplied_phone,supplied_address,supplied_birth_date,supplied_seller_kind);
+  return new;
+end;
+$;
+revoke execute on function public.create_profile_for_new_user() from public, anon, authenticated;
+
+
 alter table public.listings drop constraint if exists listings_status_check;
 alter table public.listings add constraint listings_status_check
   check (status in ('pending_review','active','reserved','sold','withdrawn','ended','rejected','suspended'));
