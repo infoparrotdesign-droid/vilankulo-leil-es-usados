@@ -15,7 +15,7 @@ O VilaShop é um marketplace moçambicano orientado à comunidade. Deve aproxima
 - Idade mínima de registo: 18 anos. Não admitir menores, mesmo com autorização de responsável.
 - Vendedores: particulares e empresas.
 - Tipos de anúncio: leilão, venda directa e negociação de preço.
-- Comissão de referência: 5% por venda concluída, suportada pelo vendedor; validar enquadramento jurídico e fiscal antes de activar pagamentos reais.
+- Comissão: ainda não aprovada. Não aplicar percentagem, calcular deduções ou liquidar valores líquidos ao vendedor até existir decisão expressa e validação jurídica/fiscal.
 - Pagamentos iniciais: verificação manual. Não tratar comprovativo enviado pelo utilizador como confirmação suficiente; a equipa confirma a transacção.
 - Entrega: comprador e vendedor combinam previamente quem suporta o custo e a forma de entrega.
 - O comprador confirma recepção; o vendedor informa a entrega; a equipa VilaShop valida oficialmente a entrega.
@@ -25,7 +25,7 @@ O VilaShop é um marketplace moçambicano orientado à comunidade. Deve aproxima
 - O administrador confirma o encerramento de processos de mediação.
 - Não permitir contactos pessoais, links externos ou tentativas de levar transacções para fora da plataforma nos espaços de negociação/mediação.
 - Avisar e permitir corrigir mensagens sinalizadas antes do envio; não penalizar automaticamente uma primeira tentativa corrigida.
-- Email administrativo para alertas importantes: adminvilashop@gmail.com.
+- Conta administrativa exclusiva: info.parrotdesign@gmail.com. Destinatários de notificações: info.parrotdesign@gmail.com e adminvilashop@gmail.com; a segunda caixa não recebe privilégios administrativos.
 - Não existem, nesta fase, integrações/API confirmadas de M-Pesa, e-Mola, SMS ou WhatsApp.
 - Não activar custódia, retenção ou pagamentos a terceiros sem validação do operador de pagamentos e aconselhamento jurídico moçambicano.
 
