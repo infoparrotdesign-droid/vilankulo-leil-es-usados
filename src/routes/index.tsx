@@ -670,6 +670,10 @@ function Marketplace() {
       toast.info("Este leilão serve apenas de exemplo.");
       return;
     }
+    if (listing.status !== "active") {
+      toast.info("Este leilão já terminou.");
+      return;
+    }
     const amountInput = new FormData(event.currentTarget).get("amount");
     const amount = z.coerce.number().positive().safeParse(amountInput);
     if (!amount.success) {
