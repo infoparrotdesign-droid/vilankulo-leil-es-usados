@@ -73,7 +73,7 @@ jobs:
         run: |
           CLEANUP_TOKEN="$(printf '%s' "$SUPABASE_ACCESS_TOKEN" | sha256sum | cut -d' ' -f1)"
           supabase secrets set --yes --project-ref "$SUPABASE_PROJECT_ID" "VILASHOP_CLEANUP_TOKEN=$CLEANUP_TOKEN"
-          supabase functions deploy cleanup-listing-photos --project-ref "$SUPABASE_PROJECT_ID"
+          supabase functions deploy cleanup-listing-photos --project-ref "$SUPABASE_PROJECT_ID" --yes
 
       - name: Run initial safe photo cleanup sweep
         if: ${{ github.event_name == 'push' }}
