@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import type { User } from "@supabase/supabase-js";
 import {
@@ -30,23 +31,25 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getAdultCutoff, isAdultDateOfBirth, sanitizeImageName } from "@/lib/marketplace-rules";
+import { getActiveListingPhotoUrls } from "@/lib/listing-photos.functions";
 import bicyclePhoto from "@/assets/used-bicycle.jpg";
 import phonePhoto from "@/assets/used-phone.jpg";
 import chairPhoto from "@/assets/wooden-chair.jpg";
 
 const APP_NAME = "VilaShop";
 const imageBucket = "boladas-media";
-const categories = ["Todos", "Eletrónicos", "Casa", "Moda", "Desporto", "Veículos", "Outros"] as const;
+const listingCategories = ["Eletrónicos", "Casa", "Moda", "Desporto", "Veículos", "Outros"] as const;
+const categories = ["Todos", ...listingCategories] as const;
 type Category = (typeof categories)[number];
 type ListingType = "sale" | "auction";
+type ListingCategory = (typeof listingCategories)[number];
+type ListingCondition = "Como novo" | "Bom estado" | "Usado";
 
 type SellerListing = {
   id: string;
   title: string;
   status: string;
-  submitted_at: string | null;
-  publish_after: string | null;
-  review_note: string | null;
+  created_at: string;
 };
 
 type Listing = {
@@ -54,8 +57,8 @@ type Listing = {
   seller_id: string;
   title: string;
   description: string;
-  category: Exclude<Category, "Todos">;
-  item_condition: "Como novo" | "Bom estado" | "Usado";
+  category: ListingCategory;
+  item_condition: ListingCondition;
   listing_type: ListingType;
   price: number;
   highest_bid: number | null;
@@ -63,6 +66,51 @@ type Listing = {
   imageUrl: string | null;
   isSample?: boolean;
 };
+
+type MarketplaceListingRow = {
+  id: string;
+  seller_id: string;
+  title: string;
+  description: string;
+  category: string;
+  item_condition: string;
+  listing_type: string;
+  price: number;
+  highest_bid: number | null;
+  photo_path: string | null;
+};
+
+function isListingCategory(value: string): value is ListingCategory {
+  return listingCategories.some((category) => category === value);
+}
+
+function isListingCondition(value: string): value is ListingCondition {
+  return ["Como novo", "Bom estado", "Usado"].some((condition) => condition === value);
+}
+
+function isListingType(value: string): value is ListingType {
+  return value === "sale" || value === "auction";
+}
+
+function toMarketplaceListing(row: MarketplaceListingRow, imageUrl: string | null): Listing | null {
+  if (!isListingCategory(row.category) || !isListingCondition(row.item_condition) || !isListingType(row.listing_type)) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    seller_id: row.seller_id,
+    title: row.title,
+    description: row.description,
+    category: row.category,
+    item_condition: row.item_condition,
+    listing_type: row.listing_type,
+    price: row.price,
+    highest_bid: row.highest_bid,
+    photo_path: row.photo_path,
+    imageUrl,
+  };
+}
 
 const sampleItems: Listing[] = [
   {
@@ -149,6 +197,7 @@ export const Route = createFileRoute("/")({
 
 function Marketplace() {
   const router = useRouter();
+  const getPhotoUrls = useServerFn(getActiveListingPhotoUrls);
   const [sessionUser, setSessionUser] = useState<User | null>(null);
   const [profileReady, setProfileReady] = useState(false);
   const [liveListings, setLiveListings] = useState<Listing[]>([]);
@@ -218,13 +267,16 @@ function Marketplace() {
         return;
       }
       const rows = data ?? [];
-      const photoPaths = rows.flatMap((row) => row.photo_path ? [row.photo_path] : []);
-      const photos = photoPaths.length
-        ? await supabase.storage.from(imageBucket).createSignedUrls(photoPaths, 3600)
-        : { data: [] };
+      const photoListingIds = rows.flatMap((row) => row.photo_path ? [row.id] : []);
+      const photos = photoListingIds.length
+        ? await getPhotoUrls({ data: { listingIds: photoListingIds } })
+        : [];
       if (!current) return;
-      const signedUrls = new Map(photoPaths.map((path, index) => [path, photos.data?.[index]?.signedUrl ?? null]));
-      setLiveListings(rows.map((row) => ({ ...row, imageUrl: row.photo_path ? signedUrls.get(row.photo_path) ?? null : null })));
+      const signedUrls = new Map(photos.map((photo) => [photo.listingId, photo.signedUrl]));
+      setLiveListings(rows.flatMap((row) => {
+        const listing = toMarketplaceListing(row, signedUrls.get(row.id) ?? null);
+        return listing ? [listing] : [];
+      }));
     })();
     return () => {
       current = false;
@@ -240,9 +292,9 @@ function Marketplace() {
     }
     void supabase
       .from("listings")
-      .select("id, title, status, submitted_at, publish_after, review_note")
+      .select("id, title, status, created_at")
       .eq("seller_id", sellerId)
-      .order("submitted_at", { ascending: false })
+      .order("created_at", { ascending: false })
       .limit(30)
       .then(({ data, error }) => {
         if (!current) return;
@@ -427,7 +479,7 @@ function Marketplace() {
       price: parsed.data.price,
       auction_ends_at: auctionEndsAt,
       photo_path: filePath,
-    }).select("id, title, status, submitted_at, publish_after, review_note").single();
+    }).select("id, title, status, created_at").single();
     setBusy(false);
     if (error) {
       await supabase.storage.from(imageBucket).remove([filePath]);
@@ -437,7 +489,7 @@ function Marketplace() {
     setShowCreate(false);
     form.reset();
     if (submitted) setMyListings((current) => [submitted, ...current.filter((item) => item.id !== submitted.id)]);
-    toast.success("Anúncio enviado para observação. Será publicado automaticamente após 6 horas, salvo intervenção da administração.");
+    toast.success("Anúncio publicado com sucesso.");
     const { data: refreshed, error: refreshError } = await supabase
       .from("listings")
       .select("id, seller_id, title, description, category, item_condition, listing_type, price, highest_bid, photo_path")
@@ -445,10 +497,16 @@ function Marketplace() {
       .order("created_at", { ascending: false })
       .limit(48);
     if (refreshError) return;
-    const refreshedPaths = (refreshed ?? []).flatMap((item) => item.photo_path ? [item.photo_path] : []);
-    const signed = refreshedPaths.length ? await supabase.storage.from(imageBucket).createSignedUrls(refreshedPaths, 3600) : { data: [] };
-    const urlMap = new Map(refreshedPaths.map((path, index) => [path, signed.data?.[index]?.signedUrl ?? null]));
-    setLiveListings((refreshed ?? []).map((item) => ({ ...item, imageUrl: item.photo_path ? urlMap.get(item.photo_path) ?? null : null })));
+    const refreshedRows = refreshed ?? [];
+    const photoListingIds = refreshedRows.flatMap((item) => item.photo_path ? [item.id] : []);
+    const signedPhotos = photoListingIds.length
+      ? await getPhotoUrls({ data: { listingIds: photoListingIds } })
+      : [];
+    const urlMap = new Map(signedPhotos.map((photo) => [photo.listingId, photo.signedUrl]));
+    setLiveListings(refreshedRows.flatMap((item) => {
+      const listing = toMarketplaceListing(item, urlMap.get(item.id) ?? null);
+      return listing ? [listing] : [];
+    }));
     setActiveCategory("Todos");
     setActiveType("all");
     setQuery("");
@@ -501,7 +559,10 @@ function Marketplace() {
         .eq("status", "active")
         .order("created_at", { ascending: false })
         .limit(48);
-      if (updated) setLiveListings(updated.map((item) => ({ ...item, imageUrl: liveListings.find((old) => old.id === item.id)?.imageUrl ?? null })));
+      if (updated) setLiveListings(updated.flatMap((item) => {
+        const listing = toMarketplaceListing(item, liveListings.find((old) => old.id === item.id)?.imageUrl ?? null);
+        return listing ? [listing] : [];
+      }));
     }
   }
 
@@ -528,7 +589,7 @@ function Marketplace() {
                 <Button type="button" variant="ghost" className="market-account" onClick={() => setShowMyListings(true)}>Os meus anúncios</Button>
                 {sessionUser.email?.toLowerCase() === "adminvilashop@gmail.com" && <Link to="/admin" className="market-account">Administração</Link>}
                 <Button type="button" variant="ghost" className="market-account" onClick={() => void signOut()} aria-label="Sair da conta">
-                  <UserRound size={17} /> <span>{sessionUser.user_metadata.full_name?.toString().split(" ")[0] || "A minha conta"}</span>
+                  <UserRound size={17} /> <span>{sessionUser.user_metadata["full_name"]?.toString().split(" ")[0] || "A minha conta"}</span>
                 </Button>
                 <Button type="button" onClick={openCreateListing} className="market-list-button"><ImagePlus size={16} /> Anunciar</Button>
               </>
@@ -662,17 +723,16 @@ function Marketplace() {
           <DialogHeader className="market-form-header">
             <span className="market-form-kicker">A sua actividade</span>
             <DialogTitle>Os meus anúncios</DialogTitle>
-            <DialogDescription>Os novos anúncios ficam em observação durante pelo menos 6 horas. Se não forem rejeitados ou suspensos, são publicados automaticamente.</DialogDescription>
+            <DialogDescription>Acompanhe aqui o estado dos seus anúncios.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            {myListings.length === 0 ? <p className="text-sm text-muted-foreground">Ainda não tem anúncios publicados ou em observação.</p> : myListings.map((item) => (
+            {myListings.length === 0 ? <p className="text-sm text-muted-foreground">Ainda não tem anúncios.</p> : myListings.map((item) => (
               <div key={item.id} className="rounded-xl border p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <strong>{item.title}</strong>
                   <span className="rounded-full bg-muted px-2 py-1 text-xs font-medium">{listingStatusLabel(item.status)}</span>
                 </div>
-                {item.status === "pending_review" && item.publish_after && <p className="mt-2 text-sm text-muted-foreground">Previsão de publicação: {new Date(item.publish_after).toLocaleString("pt-MZ")}</p>}
-                {item.review_note && <p className="mt-2 text-sm text-destructive">Nota da administração: {item.review_note}</p>}
+                <p className="mt-2 text-sm text-muted-foreground">Publicado em {new Date(item.created_at).toLocaleString("pt-MZ")}</p>
               </div>
             ))}
           </div>
@@ -780,7 +840,7 @@ function AuthDialogs({
           {needsProfile ? (
             <><DialogHeader className="market-form-header"><span className="market-form-kicker">Só falta um passo</span><DialogTitle>Complete o seu perfil</DialogTitle><DialogDescription>O VilaShop é uma comunidade para pessoas com 18 anos ou mais. Os seus dados ficam privados.</DialogDescription></DialogHeader>
               <form className="market-form" onSubmit={(event) => void onCompleteProfile(event)}>
-                <FormField label="Nome" htmlFor="profile-name"><Input id="profile-name" name="name" autoComplete="name" defaultValue={currentUser?.user_metadata.full_name?.toString() ?? ""} required minLength={2} maxLength={100} /></FormField>
+                <FormField label="Nome" htmlFor="profile-name"><Input id="profile-name" name="name" autoComplete="name" defaultValue={currentUser?.user_metadata["full_name"]?.toString() ?? ""} required minLength={2} maxLength={100} /></FormField>
                 <FormField label="Telefone" htmlFor="profile-phone"><Input id="profile-phone" name="phone" type="tel" autoComplete="tel" placeholder="+258 …" required minLength={5} maxLength={30} /></FormField>
                 <FormField label="Morada em Vilankulo" htmlFor="profile-address"><Input id="profile-address" name="address" autoComplete="street-address" placeholder="Bairro ou zona" required minLength={2} maxLength={300} /></FormField>
                 <FormField label="Data de nascimento" htmlFor="profile-birth-date"><Input id="profile-birth-date" name="birthDate" type="date" max={adultCutoff} required /></FormField>
