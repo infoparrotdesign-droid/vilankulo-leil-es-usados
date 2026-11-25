@@ -1,4 +1,5 @@
 name: VilaShop - Quality checks
+# Includes the GitHub-only Gmail moderation integration branch
 
 on:
   push:
