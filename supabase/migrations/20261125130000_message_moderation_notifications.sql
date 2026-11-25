@@ -17,13 +17,14 @@ create table if not exists public.message_moderation_flags (
   review_status text not null default 'open'
     check (review_status in ('open','under_review','resolved','dismissed')),
   email_status text not null default 'pending'
-    check (email_status in ('pending','sent','failed')),
+    check (email_status in ('pending','sending','sent','failed')),
   email_message_id text,
   email_error text,
   created_at timestamptz not null default now(),
   reviewed_at timestamptz,
   reviewed_by uuid references auth.users(id) on delete set null,
-  unique (message_id, category, flagged_by)
+  unique (message_id, category, flagged_by),
+  check ((reviewed_at is null) = (reviewed_by is null))
 );
 
 create index if not exists message_moderation_flags_queue_idx
@@ -33,7 +34,8 @@ create index if not exists message_moderation_flags_reporter_idx
 
 alter table public.message_moderation_flags enable row level security;
 revoke all on public.message_moderation_flags from anon, authenticated;
-grant select, update on public.message_moderation_flags to authenticated;
+grant select on public.message_moderation_flags to authenticated;
+grant update (review_status, reviewed_at, reviewed_by) on public.message_moderation_flags to authenticated;
 grant all on public.message_moderation_flags to service_role;
 
 create policy message_moderation_flags_admin_read
