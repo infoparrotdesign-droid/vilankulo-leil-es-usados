@@ -32,6 +32,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getAdultCutoff, isAdultDateOfBirth, sanitizeImageName } from "@/lib/marketplace-rules";
 import { buildProfileInsertPayload } from "@/lib/profile-payload";
+import { containsExternalContact, CONTACT_SHARING_ERROR } from "@/lib/message-safety";
 import { isVilaShopAdminEmail } from "@/lib/vilashop-config";
 import { getActiveListingPhotoUrls } from "@/lib/listing-photos.functions";
 import bicyclePhoto from "@/assets/used-bicycle.jpg";
@@ -613,11 +614,13 @@ function Marketplace() {
     const data = new FormData(event.currentTarget);
     const amount = z.coerce.number().positive().safeParse(data.get("offerAmount"));
     if (!amount.success) { toast.error("Indique um valor válido para a proposta."); return; }
+    const message = String(data.get("offerMessage") ?? "").trim();
+    if (containsExternalContact(message)) { toast.error(CONTACT_SHARING_ERROR); return; }
     setBusy(true);
     const { error } = await communityDb.rpc("create_listing_offer", {
       _listing_id: listing.id,
       _amount: amount.data,
-      _message: String(data.get("offerMessage") ?? ""),
+      _message: message,
     });
     setBusy(false);
     if (error) toast.error(error.message);
