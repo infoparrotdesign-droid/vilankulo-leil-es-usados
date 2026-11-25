@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getAdultCutoff, isAdultDateOfBirth, sanitizeImageName } from "./marketplace-rules";
+import { calculateSaleBreakdown, calculateSuggestedListingPrice, getAdultCutoff, isAdultDateOfBirth, sanitizeImageName } from "./marketplace-rules";
 
 describe("VilaShop minimum age validation", () => {
   const today = new Date("2026-11-25T12:00:00.000Z");
@@ -36,4 +36,54 @@ describe("VilaShop listing photo file types", () => {
     "rejects unsupported extensions: %s",
     (filename) => expect(sanitizeImageName(filename)).toBe(""),
   );
+});
+
+
+describe("VilaShop seller price and commission calculations", () => {
+  it("keeps the agreed price as the buyer total and deducts 10% from the seller", () => {
+    expect(calculateSaleBreakdown(1000)).toEqual({
+      buyerTotal: 1000,
+      commission: 100,
+      sellerNet: 900,
+    });
+  });
+
+  it("rounds commission to cents before calculating the seller net", () => {
+    expect(calculateSaleBreakdown(99.99)).toEqual({
+      buyerTotal: 99.99,
+      commission: 10,
+      sellerNet: 89.99,
+    });
+  });
+
+  it("supports an explicitly supplied commission rate", () => {
+    expect(calculateSaleBreakdown(1000, 0.05)).toEqual({
+      buyerTotal: 1000,
+      commission: 50,
+      sellerNet: 950,
+    });
+  });
+
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])(
+    "returns a safe zero breakdown for invalid listing prices: %s",
+    (price) => expect(calculateSaleBreakdown(price)).toEqual({
+      buyerTotal: 0,
+      commission: 0,
+      sellerNet: 0,
+    }),
+  );
+
+  it("rounds the suggested listing price upwards so the seller receives the target net", () => {
+    const suggested = calculateSuggestedListingPrice(5000);
+    expect(suggested).toBe(5555.56);
+    expect(calculateSaleBreakdown(suggested).sellerNet).toBeGreaterThanOrEqual(5000);
+  });
+
+  it("does not suggest a price when the target or commission rate is invalid", () => {
+    expect(calculateSuggestedListingPrice(0)).toBe(0);
+    expect(calculateSuggestedListingPrice(-10)).toBe(0);
+    expect(calculateSuggestedListingPrice(Number.NaN)).toBe(0);
+    expect(calculateSuggestedListingPrice(100, 1)).toBe(0);
+    expect(calculateSuggestedListingPrice(100, -0.1)).toBe(0);
+  });
 });

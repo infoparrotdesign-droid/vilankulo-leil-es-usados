@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getAdultCutoff, isAdultDateOfBirth, sanitizeImageName } from "@/lib/marketplace-rules";
+import { calculateSaleBreakdown, calculateSuggestedListingPrice, getAdultCutoff, isAdultDateOfBirth, sanitizeImageName } from "@/lib/marketplace-rules";
 import { buildProfileInsertPayload } from "@/lib/profile-payload";
 import { containsExternalContact, CONTACT_SHARING_ERROR } from "@/lib/message-safety";
 import { isVilaShopAdminEmail } from "@/lib/vilashop-config";
@@ -228,13 +228,12 @@ function Marketplace() {
   const [draftPrice, setDraftPrice] = useState("");
   const [targetSellerNet, setTargetSellerNet] = useState("");
   const draftListingPrice = Number(draftPrice);
-  const draftCommission = Number.isFinite(draftListingPrice) && draftListingPrice > 0 ? Math.round(draftListingPrice * 0.1 * 100) / 100 : 0;
-  const draftSellerNet = draftListingPrice - draftCommission;
-  const draftBuyerTotal = Number.isFinite(draftListingPrice) && draftListingPrice > 0 ? draftListingPrice : 0;
+  const saleBreakdown = calculateSaleBreakdown(draftListingPrice);
+  const draftCommission = saleBreakdown.commission;
+  const draftSellerNet = saleBreakdown.sellerNet;
+  const draftBuyerTotal = saleBreakdown.buyerTotal;
   const targetNetValue = Number(targetSellerNet);
-  const suggestedListingPrice = Number.isFinite(targetNetValue) && targetNetValue > 0
-    ? Math.ceil((targetNetValue / 0.9) * 100) / 100
-    : 0;
+  const suggestedListingPrice = calculateSuggestedListingPrice(targetNetValue);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isFollowingSeller, setIsFollowingSeller] = useState(false);
   const [publicBidHistory, setPublicBidHistory] = useState<PublicBid[]>([]);
