@@ -149,3 +149,5 @@
 .market-listing-card:hover {
   border-color: color-mix(in oklab, var(--market-coral) 58%, var(--market-line));
 }
+
+/* Lovable Preview sync checkpoint: 2026-11-25 */
