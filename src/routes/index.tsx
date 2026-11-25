@@ -1013,7 +1013,7 @@ function AuthDialogs({
       </Dialog>
 
       <Dialog open={showRegister} onOpenChange={(open) => { if (!needsProfile) setShowRegister(open); }}>
-        <DialogContent className="market-dialog-content market-register-dialog">
+        <DialogContent className="market-dialog-content market-register-dialog" showCloseButton={!needsProfile}>
           {needsProfile ? (
             <><DialogHeader className="market-form-header"><span className="market-form-kicker">Só falta um passo</span><DialogTitle>Complete o seu perfil</DialogTitle><DialogDescription>O VilaShop é uma comunidade para pessoas com 18 anos ou mais. Os seus dados ficam privados.</DialogDescription></DialogHeader>
               <form className="market-form" onSubmit={(event) => void onCompleteProfile(event)}>
