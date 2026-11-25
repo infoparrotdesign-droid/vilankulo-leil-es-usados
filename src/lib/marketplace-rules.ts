@@ -20,9 +20,33 @@ export function isAdultDateOfBirth(value: string, today = new Date()): boolean {
   return isValidCalendarDate(value) && value <= getAdultCutoff(today);
 }
 
+export const MAX_LISTING_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+
+const SUPPORTED_IMAGE_MIME_TYPES: Record<string, string[]> = {
+  jpg: ["image/jpeg"],
+  jpeg: ["image/jpeg"],
+  png: ["image/png"],
+  webp: ["image/webp"],
+};
+
 export function sanitizeImageName(filename: string): string {
   const extension = filename.toLowerCase().split(".").pop() ?? "";
-  return ["jpg", "jpeg", "png", "webp"].includes(extension) ? extension : "";
+  return Object.hasOwn(SUPPORTED_IMAGE_MIME_TYPES, extension) ? extension : "";
+}
+
+/** Accept only non-empty JPG, PNG or WebP files up to 5 MiB with matching MIME metadata. */
+export function isSupportedListingImage(file: {
+  name: string;
+  type: string;
+  size: number;
+}): boolean {
+  const extension = sanitizeImageName(file.name);
+  if (!extension || !Number.isFinite(file.size) || file.size <= 0
+    || file.size > MAX_LISTING_IMAGE_SIZE_BYTES) {
+    return false;
+  }
+
+  return SUPPORTED_IMAGE_MIME_TYPES[extension].includes(file.type.toLowerCase());
 }
 
 

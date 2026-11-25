@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateSaleBreakdown, calculateSuggestedListingPrice, getAdultCutoff, isAdultDateOfBirth, sanitizeImageName } from "./marketplace-rules";
+import { calculateSaleBreakdown, calculateSuggestedListingPrice, getAdultCutoff, isAdultDateOfBirth, isSupportedListingImage, MAX_LISTING_IMAGE_SIZE_BYTES, sanitizeImageName } from "./marketplace-rules";
 
 describe("VilaShop minimum age validation", () => {
   const today = new Date("2026-11-25T12:00:00.000Z");
@@ -85,5 +85,38 @@ describe("VilaShop seller price and commission calculations", () => {
     expect(calculateSuggestedListingPrice(Number.NaN)).toBe(0);
     expect(calculateSuggestedListingPrice(100, 1)).toBe(0);
     expect(calculateSuggestedListingPrice(100, -0.1)).toBe(0);
+  });
+});
+
+
+describe("VilaShop listing image upload validation", () => {
+  const validImage = { name: "produto.webp", type: "image/webp", size: 1024 };
+
+  it("accepts supported image formats with matching MIME types", () => {
+    expect(isSupportedListingImage({ name: "foto.jpg", type: "image/jpeg", size: 1024 })).toBe(true);
+    expect(isSupportedListingImage({ name: "foto.jpeg", type: "image/jpeg", size: 1024 })).toBe(true);
+    expect(isSupportedListingImage({ name: "foto.png", type: "image/png", size: 1024 })).toBe(true);
+    expect(isSupportedListingImage(validImage)).toBe(true);
+  });
+
+  it("rejects empty files and files larger than five MiB", () => {
+    expect(isSupportedListingImage({ ...validImage, size: 0 })).toBe(false);
+    expect(isSupportedListingImage({ ...validImage, size: MAX_LISTING_IMAGE_SIZE_BYTES + 1 })).toBe(false);
+    expect(isSupportedListingImage({ ...validImage, size: Number.NaN })).toBe(false);
+  });
+
+  it("accepts a file exactly at the five MiB limit", () => {
+    expect(isSupportedListingImage({ ...validImage, size: MAX_LISTING_IMAGE_SIZE_BYTES })).toBe(true);
+  });
+
+  it("rejects mismatched, missing or unsupported MIME types", () => {
+    expect(isSupportedListingImage({ ...validImage, type: "image/jpeg" })).toBe(false);
+    expect(isSupportedListingImage({ ...validImage, type: "" })).toBe(false);
+    expect(isSupportedListingImage({ ...validImage, type: "image/svg+xml" })).toBe(false);
+  });
+
+  it("rejects unsupported extensions even when the MIME type looks valid", () => {
+    expect(isSupportedListingImage({ ...validImage, name: "imagem.gif" })).toBe(false);
+    expect(isSupportedListingImage({ ...validImage, name: "document.pdf", type: "image/png" })).toBe(false);
   });
 });

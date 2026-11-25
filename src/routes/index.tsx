@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { calculateSaleBreakdown, calculateSuggestedListingPrice, getAdultCutoff, isAdultDateOfBirth, sanitizeImageName } from "@/lib/marketplace-rules";
+import { calculateSaleBreakdown, calculateSuggestedListingPrice, getAdultCutoff, isAdultDateOfBirth, isSupportedListingImage, sanitizeImageName } from "@/lib/marketplace-rules";
 import { buildProfileInsertPayload } from "@/lib/profile-payload";
 import { containsExternalContact, CONTACT_SHARING_ERROR } from "@/lib/message-safety";
 import { isVilaShopAdminEmail } from "@/lib/vilashop-config";
@@ -186,7 +186,7 @@ const listingSchema = z.object({
   itemCondition: z.enum(["Como novo", "Bom estado", "Usado"]),
   listingType: z.enum(["sale", "auction", "negotiation"]),
   price: z.number().positive("Indique um preço válido."),
-  photo: z.instanceof(File).refine((file) => Boolean(sanitizeImageName(file.name)), "Escolha uma foto JPG, PNG ou WebP."),
+  photo: z.instanceof(File).refine(isSupportedListingImage, "Escolha uma foto JPG, PNG ou WebP válida, até 5 MB."),
 });
 
 export const Route = createFileRoute("/")({
@@ -930,7 +930,7 @@ function Marketplace() {
             </div>
             {draftBuyerTotal > 0 && <div className="rounded-xl border border-border bg-card p-3 text-sm"><p className="mb-2 font-semibold">Resumo da sua venda</p><p className="flex justify-between gap-3"><span>Comprador paga</span><strong>{formatPrice(draftBuyerTotal)}</strong></p><p className="mt-1 flex justify-between gap-3 text-muted-foreground"><span>Comissão VilaShop (10%)</span><span>− {formatPrice(draftCommission)}</span></p><p className="mt-2 flex justify-between gap-3 border-t pt-2 text-base"><strong>Você recebe (90%)</strong><strong>{formatPrice(draftSellerNet)}</strong></p><p className="mt-2 text-xs text-muted-foreground">A comissão só é retida numa venda concluída. Não é cobrada para publicar o anúncio.</p></div>}
             <fieldset className="market-listing-type"><legend>Como quer vender?</legend><label className="market-radio-line"><input type="radio" name="listingType" value="sale" defaultChecked /><span><strong>Venda directa</strong><small>Defina o preço final.</small></span></label><label className="market-radio-line"><input type="radio" name="listingType" value="negotiation" /><span><strong>Negociação</strong><small>Receba propostas e envie contrapropostas.</small></span></label><label className="market-radio-line"><input type="radio" name="listingType" value="auction" /><span><strong>Leilão</strong><small>Receba lances durante 3 dias.</small></span><Gavel size={17} /></label></fieldset>
-            <FormField label="Foto do artigo" htmlFor="listing-photo"><div className="market-upload-line"><ImagePlus size={18} /><span>Uma foto clara ajuda o artigo a destacar-se.</span></div><Input id="listing-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required aria-label="Escolher foto do artigo" /></FormField>
+            <FormField label="Foto do artigo" htmlFor="listing-photo"><div className="market-upload-line"><ImagePlus size={18} /><span>JPG, PNG ou WebP até 5 MB. Uma foto clara ajuda o artigo a destacar-se.</span></div><Input id="listing-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required aria-label="Escolher foto do artigo" /></FormField>
             <div className="market-private-note"><ShieldCheck size={16} /><span>Use fotos suas. O seu endereço e telefone não ficam visíveis no anúncio.</span></div>
             <Button type="submit" disabled={busy} className="market-form-submit">{busy ? "A publicar…" : "Publicar anúncio"}<ArrowRight size={17} /></Button>
           </form>
