@@ -9,6 +9,7 @@ on:
       - "supabase/config.toml"
       - "supabase/functions/cleanup-listing-photos/**"
       - "supabase/functions/send-admin-notification/**"
+      - "supabase/functions/flag-message/**"
       - ".github/workflows/vilashop-supabase-migrations.yml"
   schedule:
     - cron: "17 * * * *"
