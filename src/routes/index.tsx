@@ -31,6 +31,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getAdultCutoff, isAdultDateOfBirth, sanitizeImageName } from "@/lib/marketplace-rules";
+import { buildProfileInsertPayload } from "@/lib/profile-payload";
 import { isVilaShopAdminEmail } from "@/lib/vilashop-config";
 import { getActiveListingPhotoUrls } from "@/lib/listing-photos.functions";
 import bicyclePhoto from "@/assets/used-bicycle.jpg";
@@ -454,17 +455,29 @@ function Marketplace() {
       return;
     }
     setBusy(true);
-    const { error } = await communityDb.from("profiles").insert({
-      id: sessionUser.id,
-      display_name: name.data,
+
+    // The live profiles table intentionally stores only the core profile fields.
+    // Keep seller_kind as non-authoritative profile metadata, not as a DB column.
+    const { error: metadataError } = await supabase.auth.updateUser({
+      data: { seller_kind: sellerKind.data },
+    });
+    if (metadataError) {
+      setBusy(false);
+      toast.error("Não foi possível guardar o tipo de vendedor. Tente novamente.");
+      return;
+    }
+
+    const { error } = await communityDb.from("profiles").insert(buildProfileInsertPayload({
+      userId: sessionUser.id,
+      displayName: name.data,
       phone: phone.data,
       address: address.data,
-      birth_date: birthDate.data,
-      seller_kind: sellerKind.data,
-    });
+      birthDate: birthDate.data,
+    }));
     setBusy(false);
     if (error) {
-      toast.error("Não foi possível guardar os dados. Verifique a data de nascimento e tente novamente.");
+      console.error("Could not complete VilaShop profile", error);
+      toast.error("Não foi possível guardar os dados do perfil. Verifique os campos e tente novamente.");
       return;
     }
     setProfileReady(true);
@@ -1000,7 +1013,7 @@ function AuthDialogs({
       </Dialog>
 
       <Dialog open={showRegister} onOpenChange={(open) => { if (!needsProfile) setShowRegister(open); }}>
-        <DialogContent className="market-dialog-content market-register-dialog">
+        <DialogContent className="market-dialog-content market-register-dialog" showCloseButton={!needsProfile}>
           {needsProfile ? (
             <><DialogHeader className="market-form-header"><span className="market-form-kicker">Só falta um passo</span><DialogTitle>Complete o seu perfil</DialogTitle><DialogDescription>O VilaShop é uma comunidade para pessoas com 18 anos ou mais. Os seus dados ficam privados.</DialogDescription></DialogHeader>
               <form className="market-form" onSubmit={(event) => void onCompleteProfile(event)}>
