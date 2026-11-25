@@ -101,18 +101,31 @@ Deno.serve(async (request: Request) => {
       .select("id, created_at")
       .single();
 
+    let storedFlag = flag;
     if (insertError?.code === "23505") {
-      return json({ ok: true, duplicate: true, notificationSent: false });
+      const { data: existing, error: existingError } = await admin
+        .from("message_moderation_flags")
+        .select("id, created_at, email_status")
+        .eq("message_id", messageId)
+        .eq("category", category)
+        .eq("flagged_by", userData.user.id)
+        .single();
+      if (existingError || !existing) throw existingError ?? new Error("Could not reload existing moderation flag");
+      if (existing.email_status === "sent") {
+        return json({ ok: true, flagId: existing.id, duplicate: true, notificationSent: true });
+      }
+      storedFlag = { id: existing.id, created_at: existing.created_at };
+    } else if (insertError || !flag) {
+      throw insertError ?? new Error("Could not store moderation flag");
     }
-    if (insertError || !flag) throw insertError ?? new Error("Could not store moderation flag");
 
     const mailerToken = Deno.env.get("VILASHOP_MAILER_TOKEN");
     if (!mailerToken) {
       await admin.from("message_moderation_flags").update({
         email_status: "failed",
         email_error: "Mailer token is not configured",
-      }).eq("id", flag.id);
-      return json({ ok: true, flagId: flag.id, notificationSent: false }, 202);
+      }).eq("id", storedFlag.id);
+      return json({ ok: true, flagId: storedFlag.id, notificationSent: false }, 202);
     }
 
     const excerpt = messageContent.length > 700 ? messageContent.slice(0, 697) + "..." : messageContent;
@@ -141,7 +154,7 @@ Deno.serve(async (request: Request) => {
         title: CATEGORY_LABELS[category],
         event: "Mensagem sinalizada",
         message: emailMessage,
-        reference: flag.id,
+        reference: storedFlag.id,
       }),
     });
 
@@ -150,8 +163,8 @@ Deno.serve(async (request: Request) => {
       await admin.from("message_moderation_flags").update({
         email_status: "failed",
         email_error: "Mailer returned HTTP " + mailResponse.status + ": " + errorText.slice(0, 300),
-      }).eq("id", flag.id);
-      return json({ ok: true, flagId: flag.id, notificationSent: false }, 202);
+      }).eq("id", storedFlag.id);
+      return json({ ok: true, flagId: storedFlag.id, notificationSent: false }, 202);
     }
 
     const mailResult = await mailResponse.json();
@@ -159,9 +172,9 @@ Deno.serve(async (request: Request) => {
       email_status: "sent",
       email_message_id: typeof mailResult.messageId === "string" ? mailResult.messageId : null,
       email_error: null,
-    }).eq("id", flag.id);
+    }).eq("id", storedFlag.id);
 
-    return json({ ok: true, flagId: flag.id, notificationSent: true });
+    return json({ ok: true, flagId: storedFlag.id, notificationSent: true });
   } catch (error) {
     console.error("Message moderation notification failed", error instanceof Error ? error.message : "Unknown error");
     return json({ error: "Could not register message flag" }, 500);
