@@ -50,5 +50,27 @@ jobs:
       - name: Run tests
         run: bun run test
 
-      - name: Build production app
+      - name: Build production app (Node server preset)
         run: bun run build
+        env:
+          NITRO_PRESET: node_server
+
+      - name: Smoke test production server
+        run: |
+          set -euo pipefail
+          set -a
+          . ./.env
+          set +a
+          PORT=3000 HOST=127.0.0.1 node .output/server/index.mjs > /tmp/vilashop-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --output /dev/null http://127.0.0.1:3000/; then
+              echo "Production server returned HTTP 200."
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/vilashop-server.log
+          echo "Production server did not become healthy."
+          exit 1
