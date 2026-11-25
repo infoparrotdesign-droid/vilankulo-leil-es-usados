@@ -50,15 +50,19 @@ export async function flagMessageForModeration(
     throw new Error("A observação excede o limite permitido.");
   }
 
-  const { data, error } = await supabase.functions.invoke("flag-message", { body: {
-    ...input,
-    messageId: input.messageId.trim(),
-    conversationId: input.conversationId?.trim() || undefined,
-    messageContent: input.messageContent.trim(),
-    details: input.details?.trim() || undefined,
-  } });
+  const { data, error } = await supabase.functions.invoke("flag-message", {
+    body: {
+      ...input,
+      messageId: input.messageId.trim(),
+      conversationId: input.conversationId?.trim() || undefined,
+      messageContent: input.messageContent.trim(),
+      details: input.details?.trim() || undefined,
+    },
+  });
   if (error) throw error;
-  if (!data || data.ok !== true) throw new Error("Não foi possível sinalizar a mensagem.");
+  if (!data || data.ok !== true) {
+    throw new Error("Não foi possível sinalizar a mensagem.");
+  }
   return {
     flagId: typeof data.flagId === "string" ? data.flagId : undefined,
     notificationSent: data.notificationSent === true,
