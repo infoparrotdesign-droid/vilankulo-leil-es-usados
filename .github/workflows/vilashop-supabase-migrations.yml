@@ -30,6 +30,11 @@ on:
         required: true
         type: boolean
         default: false
+      send_test_notification:
+        description: "Enviar um email de teste para os dois destinatários administrativos"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -128,6 +133,18 @@ jobs:
 
       - name: Deploy authenticated message-flag endpoint
         run: supabase functions deploy flag-message --project-ref "$SUPABASE_PROJECT_ID" --yes
+
+      - name: Send optional Gmail delivery test
+        if: ${{ inputs.send_test_notification == true }}
+        shell: bash
+        run: |
+          MAILER_TOKEN="$(printf 'vilashop-mailer:%s' "$SUPABASE_ACCESS_TOKEN" | sha256sum | cut -d' ' -f1)"
+          curl --fail-with-body --silent --show-error \\
+            --request POST \\
+            --header "x-vilashop-mailer-token: $MAILER_TOKEN" \\
+            --header "Content-Type: application/json" \\
+            --data '{"title":"Teste de configuração Gmail","event":"Teste de entrega","message":"O envio de notificações administrativas do VilaShop está a funcionar.","reference":"GMAIL-CONFIG-TEST"}' \\
+            "https://ibwasunbdqplanwhnexf.supabase.co/functions/v1/send-admin-notification"
 
   cleanup_photos:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.run_photo_cleanup == true) }}
