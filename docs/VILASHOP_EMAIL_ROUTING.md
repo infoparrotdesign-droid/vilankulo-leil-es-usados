@@ -37,10 +37,10 @@ Se o consentimento OAuth estiver em Testing, os refresh tokens para âmbitos Gma
 - [x] Segredo de chamada validado no servidor; credenciais não expostas ao browser.
 - [x] Workflow preparado para publicar a função e importar OAuth secrets do ambiente GitHub `production`.
 - [ ] Criar OAuth Client e obter refresh token na conta remetente.
-- [ ] Adicionar os três secrets Gmail no GitHub e executar `configure_gmail=true`.
+- [ ] Adicionar os três secrets Gmail no GitHub e executar `deploy_admin_notifications=true`.
 - [ ] Ligar os eventos administrativos do marketplace ao envio e testar entrega real nos dois destinatários.
 
-A função de envio não deve ser considerada operacional até os secrets serem configurados e o teste real de entrega ser concluído. O envio automático de eventos depende da integração dos eventos administrativos com a função; a simples existência da função não dispara emails por si só.
+A função de envio não deve ser considerada operacional até os secrets serem configurados e o teste real de entrega ser concluído. A nova função `flag-message` regista sinalizações autenticadas e chama o mailer; o chat ainda precisa de invocar o helper `flagMessageForModeration` quando uma mensagem for sinalizada. O frontend actual ainda não tem chat interno.
 
 ## Segurança
 
