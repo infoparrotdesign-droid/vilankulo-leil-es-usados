@@ -214,6 +214,9 @@ function Marketplace() {
   const [sessionUser, setSessionUser] = useState<User | null>(null);
   const [profileReady, setProfileReady] = useState(false);
   const [liveListings, setLiveListings] = useState<Listing[]>([]);
+  const [listingsLoading, setListingsLoading] = useState(true);
+  const [listingsLoadError, setListingsLoadError] = useState(false);
+  const [listingsRetryKey, setListingsRetryKey] = useState(0);
   const [myListings, setMyListings] = useState<SellerListing[]>([]);
   const [showMyListings, setShowMyListings] = useState(false);
   const [query, setQuery] = useState("");
@@ -277,36 +280,46 @@ function Marketplace() {
 
   useEffect(() => {
     let current = true;
-    void (async () => {
-      const { data, error } = await supabase
-        .from("listings")
-        .select("id, seller_id, title, description, category, item_condition, listing_type, price, highest_bid, photo_path, status, created_at")
-        .in("status", ["active", "ended"])
-        .order("created_at", { ascending: false })
-        .limit(48);
+    setListingsLoading(true);
+    setListingsLoadError(false);
 
-      if (!current) return;
-      if (error) {
+    void (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("listings")
+          .select("id, seller_id, title, description, category, item_condition, listing_type, price, highest_bid, photo_path, status, created_at")
+          .in("status", ["active", "ended"])
+          .order("created_at", { ascending: false })
+          .limit(48);
+
+        if (error) throw error;
+        const rows = data ?? [];
+        const photoListingIds = rows.flatMap((row) => row.photo_path ? [row.id] : []);
+        const photos = photoListingIds.length
+          ? await getPhotoUrls({ data: { listingIds: photoListingIds } })
+          : [];
+        if (!current) return;
+
+        const signedUrls = new Map(photos.map((photo) => [photo.listingId, photo.signedUrl]));
+        setLiveListings(rows.flatMap((row) => {
+          const listing = toMarketplaceListing(row, signedUrls.get(row.id) ?? null);
+          return listing ? [listing] : [];
+        }));
+      } catch (error) {
         console.error("Could not load public listings", error);
-        setLiveListings([]);
-        return;
+        if (current) {
+          setLiveListings([]);
+          setListingsLoadError(true);
+        }
+      } finally {
+        if (current) setListingsLoading(false);
       }
-      const rows = data ?? [];
-      const photoListingIds = rows.flatMap((row) => row.photo_path ? [row.id] : []);
-      const photos = photoListingIds.length
-        ? await getPhotoUrls({ data: { listingIds: photoListingIds } })
-        : [];
-      if (!current) return;
-      const signedUrls = new Map(photos.map((photo) => [photo.listingId, photo.signedUrl]));
-      setLiveListings(rows.flatMap((row) => {
-        const listing = toMarketplaceListing(row, signedUrls.get(row.id) ?? null);
-        return listing ? [listing] : [];
-      }));
     })();
+
     return () => {
       current = false;
     };
-  }, []);
+  }, [getPhotoUrls, listingsRetryKey]);
 
   useEffect(() => {
     let current = true;
@@ -359,13 +372,13 @@ function Marketplace() {
   }, [sellerId]);
 
   const visibleListings = useMemo(() => {
-    const items = liveListings.length > 0 ? liveListings : sampleItems;
+    const items = liveListings.length > 0 ? liveListings : usesSamples ? sampleItems : [];
     return items
       .filter((item) => activeCategory === "Todos" || item.category === activeCategory)
       .filter((item) => activeType === "all" || item.listing_type === activeType)
       .filter((item) => !query || `${item.title} ${item.description} ${item.category}`.toLocaleLowerCase("pt-MZ").includes(query.toLocaleLowerCase("pt-MZ")))
       .sort((a, b) => sortBy === "price" ? a.price - b.price : 0);
-  }, [activeCategory, activeType, liveListings, query, sortBy]);
+  }, [activeCategory, activeType, liveListings, query, sortBy, usesSamples]);
 
   function openCreateListing() {
     if (!sessionUser || !profileReady) {
@@ -729,7 +742,7 @@ function Marketplace() {
     }
   }
 
-  const usesSamples = liveListings.length === 0;
+  const usesSamples = !listingsLoading && !listingsLoadError && liveListings.length === 0;
   const currentBid = selectedListing?.highest_bid ?? selectedListing?.price ?? 0;
 
   return (
@@ -833,7 +846,11 @@ function Marketplace() {
         <div className="market-category-chips" aria-label="Categorias">
           {categories.map((category) => <Button key={category} type="button" variant="ghost" size="sm" onClick={() => setActiveCategory(category)} className={`market-chip ${activeCategory === category ? "is-current" : ""}`}>{category}</Button>)}
         </div>
-        {visibleListings.length > 0 ? (
+        {listingsLoading ? (
+          <div className="market-empty-results" role="status" aria-live="polite"><span className="market-empty-icon"><Search size={23} /></span><h3>A carregar os anúncios</h3><p>Estamos a procurar as novidades da comunidade VilaShop.</p></div>
+        ) : listingsLoadError ? (
+          <div className="market-empty-results" role="alert"><span className="market-empty-icon"><Search size={23} /></span><h3>Não foi possível carregar os anúncios</h3><p>Verifique a sua ligação e tente novamente. Os exemplos não substituem anúncios reais.</p><Button type="button" variant="outline" onClick={() => setListingsRetryKey((value) => value + 1)}>Tentar novamente</Button></div>
+        ) : visibleListings.length > 0 ? (
           <div className="market-listing-grid">
             {visibleListings.map((listing) => <ListingCard key={listing.id} listing={listing} onOpen={() => setSelectedListing(listing)} />)}
           </div>
