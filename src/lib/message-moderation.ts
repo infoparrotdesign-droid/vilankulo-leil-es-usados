@@ -34,7 +34,29 @@ export async function flagMessageForModeration(
   supabase: SupabaseClient,
   input: FlagMessageInput,
 ): Promise<{ flagId?: string; notificationSent: boolean; duplicate?: boolean }> {
-  const { data, error } = await supabase.functions.invoke("flag-message", { body: input });
+  if (!input.messageId.trim() || input.messageId.trim().length > 128) {
+    throw new Error("Referência de mensagem inválida.");
+  }
+  if (input.conversationId && input.conversationId.trim().length > 128) {
+    throw new Error("Referência de conversa inválida.");
+  }
+  if (!MESSAGE_FLAG_CATEGORIES.includes(input.category)) {
+    throw new Error("Categoria de sinalização inválida.");
+  }
+  if (!input.messageContent.trim() || input.messageContent.trim().length > 5000) {
+    throw new Error("O conteúdo da mensagem é inválido.");
+  }
+  if ((input.details?.trim().length ?? 0) > 1000) {
+    throw new Error("A observação excede o limite permitido.");
+  }
+
+  const { data, error } = await supabase.functions.invoke("flag-message", { body: {
+    ...input,
+    messageId: input.messageId.trim(),
+    conversationId: input.conversationId?.trim() || undefined,
+    messageContent: input.messageContent.trim(),
+    details: input.details?.trim() || undefined,
+  } });
   if (error) throw error;
   if (!data || data.ok !== true) throw new Error("Não foi possível sinalizar a mensagem.");
   return {
