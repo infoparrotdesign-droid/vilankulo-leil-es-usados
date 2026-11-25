@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { calculateSaleBreakdown, calculateSuggestedListingPrice, getAdultCutoff, getComparableListingPrice, isAdultDateOfBirth, isSupportedListingImage, isValidMarketplaceAmount, matchesMarketplaceSearch, normalizeListingDescription, normalizeListingTitle, sanitizeImageName } from "@/lib/marketplace-rules";
+import { calculateSaleBreakdown, calculateSuggestedListingPrice, getAdultCutoff, getComparableListingPrice, isAdultDateOfBirth, isSupportedListingImage, isValidMarketplaceAmount, hasValidListingImageSignature, matchesMarketplaceSearch, normalizeListingDescription, normalizeListingTitle, sanitizeImageName } from "@/lib/marketplace-rules";
 import { buildProfileInsertPayload } from "@/lib/profile-payload";
 import { containsExternalContact, CONTACT_SHARING_ERROR } from "@/lib/message-safety";
 import { isVilaShopAdminEmail } from "@/lib/vilashop-config";
@@ -538,6 +538,19 @@ function Marketplace() {
       return;
     }
     setBusy(true);
+    let imageBytes: Uint8Array;
+    try {
+      imageBytes = new Uint8Array(await parsed.data.photo.slice(0, 16).arrayBuffer());
+    } catch {
+      setBusy(false);
+      toast.error("Não foi possível verificar o conteúdo da fotografia. Escolha outra imagem.");
+      return;
+    }
+    if (!hasValidListingImageSignature(parsed.data.photo.name, parsed.data.photo.type, imageBytes)) {
+      setBusy(false);
+      toast.error("O conteúdo da fotografia não corresponde ao formato indicado. Escolha uma imagem JPG, PNG ou WebP válida.");
+      return;
+    }
     const safeExtension = sanitizeImageName(parsed.data.photo.name);
     const filePath = `${sessionUser.id}/listings/${crypto.randomUUID()}.${safeExtension}`;
     const { error: uploadError } = await supabase.storage.from(imageBucket).upload(filePath, parsed.data.photo, {

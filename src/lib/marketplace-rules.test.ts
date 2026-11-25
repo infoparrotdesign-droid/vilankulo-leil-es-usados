@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateSaleBreakdown, calculateSuggestedListingPrice, getAdultCutoff, getComparableListingPrice, isAdultDateOfBirth, isSupportedListingImage, isValidMarketplaceAmount, matchesMarketplaceSearch, MAX_LISTING_IMAGE_SIZE_BYTES, normalizeListingDescription, normalizeListingTitle, normalizeMarketplaceSearch, sanitizeImageName } from "./marketplace-rules";
+import { calculateSaleBreakdown, calculateSuggestedListingPrice, getAdultCutoff, getComparableListingPrice, isAdultDateOfBirth, isSupportedListingImage, isValidMarketplaceAmount, hasValidListingImageSignature, matchesMarketplaceSearch, MAX_LISTING_IMAGE_SIZE_BYTES, normalizeListingDescription, normalizeListingTitle, normalizeMarketplaceSearch, sanitizeImageName } from "./marketplace-rules";
 
 describe("VilaShop minimum age validation", () => {
   const today = new Date("2026-11-25T12:00:00.000Z");
@@ -161,5 +161,32 @@ describe("VilaShop listing text and monetary input rules", () => {
 
   it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, 1.001])("rejects invalid monetary amounts: %s", (amount) => {
     expect(isValidMarketplaceAmount(amount)).toBe(false);
+  });
+});
+
+
+describe("VilaShop listing image binary signatures", () => {
+  it("accepts JPEG files with the expected binary signature", () => {
+    expect(hasValidListingImageSignature("photo.jpg", "image/jpeg", Uint8Array.from([0xff, 0xd8, 0xff, 0xe0]))).toBe(true);
+    expect(hasValidListingImageSignature("photo.jpeg", "image/jpeg", Uint8Array.from([0xff, 0xd8, 0xff]))).toBe(true);
+  });
+
+  it("accepts PNG files with the complete eight-byte signature", () => {
+    expect(hasValidListingImageSignature("photo.png", "image/png", Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))).toBe(true);
+  });
+
+  it("accepts WebP files only when RIFF and WEBP markers are present", () => {
+    expect(hasValidListingImageSignature("photo.webp", "image/webp", Uint8Array.from([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]))).toBe(true);
+  });
+
+  it("rejects a supported extension and MIME type when the binary content is another format", () => {
+    expect(hasValidListingImageSignature("fake.png", "image/png", Uint8Array.from([0xff, 0xd8, 0xff, 0xe0]))).toBe(false);
+    expect(hasValidListingImageSignature("fake.webp", "image/webp", Uint8Array.from([0x89, 0x50, 0x4e, 0x47]))).toBe(false);
+  });
+
+  it("rejects truncated signatures and mismatched metadata", () => {
+    expect(hasValidListingImageSignature("short.png", "image/png", Uint8Array.from([0x89, 0x50]))).toBe(false);
+    expect(hasValidListingImageSignature("photo.jpg", "image/png", Uint8Array.from([0xff, 0xd8, 0xff]))).toBe(false);
+    expect(hasValidListingImageSignature("photo.gif", "image/gif", new Uint8Array(16))).toBe(false);
   });
 });

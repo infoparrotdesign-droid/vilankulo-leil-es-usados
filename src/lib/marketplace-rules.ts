@@ -133,3 +133,27 @@ export function isValidMarketplaceAmount(value: number): boolean {
   return Number.isFinite(value) && value > 0
     && Math.abs(value * 100 - Math.round(value * 100)) < 1e-7;
 }
+
+
+/** Confirms the file's binary signature agrees with its supported extension and MIME type. */
+export function hasValidListingImageSignature(
+  filename: string,
+  mimeType: string,
+  bytes: Uint8Array,
+): boolean {
+  const extension = sanitizeImageName(filename);
+  if (!extension || !SUPPORTED_IMAGE_MIME_TYPES[extension].includes(mimeType.toLowerCase())) return false;
+
+  if (extension === "jpg" || extension === "jpeg") {
+    return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  }
+
+  if (extension === "png") {
+    const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+    return bytes.length >= signature.length && signature.every((value, index) => bytes[index] === value);
+  }
+
+  return bytes.length >= 12
+    && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46
+    && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50;
+}
