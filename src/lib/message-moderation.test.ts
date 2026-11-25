@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { MESSAGE_FLAG_CATEGORIES, MESSAGE_FLAG_CATEGORY_LABELS, flagMessageForModeration } from "./message-moderation";
+import {
+  MESSAGE_FLAG_CATEGORIES,
+  MESSAGE_FLAG_CATEGORY_LABELS,
+  flagMessageForModeration,
+} from "./message-moderation";
 
 describe("VilaShop message moderation categories", () => {
   it("supports every administrative alert category", () => {
@@ -26,22 +30,32 @@ describe("flagMessageForModeration input validation", () => {
   };
 
   it("rejects empty message references without calling the backend", async () => {
-    await expect(flagMessageForModeration(client, { ...validInput, messageId: " " }))
-      .rejects.toThrow("Referência de mensagem inválida.");
+    await expect(
+      flagMessageForModeration(client, { ...validInput, messageId: " " }),
+    ).rejects.toThrow("Referência de mensagem inválida.");
     expect(client.functions.invoke).not.toHaveBeenCalled();
   });
 
   it("rejects empty or oversized message content", async () => {
-    await expect(flagMessageForModeration(client, { ...validInput, messageContent: " " }))
-      .rejects.toThrow("O conteúdo da mensagem é inválido.");
-    await expect(flagMessageForModeration(client, { ...validInput, messageContent: "x".repeat(5001) }))
-      .rejects.toThrow("O conteúdo da mensagem é inválido.");
+    await expect(
+      flagMessageForModeration(client, { ...validInput, messageContent: " " }),
+    ).rejects.toThrow("O conteúdo da mensagem é inválido.");
+    await expect(
+      flagMessageForModeration(client, {
+        ...validInput,
+        messageContent: "x".repeat(5001),
+      }),
+    ).rejects.toThrow("O conteúdo da mensagem é inválido.");
     expect(client.functions.invoke).not.toHaveBeenCalled();
   });
 
   it("rejects oversized reporter notes", async () => {
-    await expect(flagMessageForModeration(client, { ...validInput, details: "x".repeat(1001) }))
-      .rejects.toThrow("A observação excede o limite permitido.");
+    await expect(
+      flagMessageForModeration(client, {
+        ...validInput,
+        details: "x".repeat(1001),
+      }),
+    ).rejects.toThrow("A observação excede o limite permitido.");
     expect(client.functions.invoke).not.toHaveBeenCalled();
   });
 });
