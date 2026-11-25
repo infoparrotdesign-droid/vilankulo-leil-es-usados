@@ -34,3 +34,9 @@ Depois de cada commit no GitHub:
 
 - Workflow `VilaShop - Quality checks`: lint (baseline conhecido não bloqueante), testes e build.
 - Workflow `VilaShop - Test direct PostgreSQL and deploy migrations`: ligação directa, dry-run e deploy das Edge Functions; não aplica migrations sem input explícito.
+
+### Recuperação de sincronização — 25/11/2026
+
+- Foi criado o commit vazio `23d26c6` para re-disparar o evento GitHub; o projecto Lovable continuou a reportar o SHA anterior.
+- Esta actualização documental gera um evento `push` com conteúdo alterado para testar a reacção do webhook de sincronização do Lovable.
+- A acção não publica o projecto, não altera dados, não executa migrations e não consome créditos Lovable.
