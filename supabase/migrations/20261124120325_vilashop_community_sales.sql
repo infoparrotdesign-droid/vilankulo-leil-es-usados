@@ -213,7 +213,7 @@ returns boolean
 language sql
 immutable
 set search_path = ''
-as $
+as $contact_guard$
   select
     coalesce(_message, '') ~* '(^|[^[:alnum:]_.+-])[[:alnum:]._%+-]+@[[:alnum:].-]+\.[A-Za-z]{2,}([^[:alnum:]_.-]|$)'
     or coalesce(_message, '') ~* 'https?://|www\.'
@@ -221,12 +221,12 @@ as $
     or coalesce(_message, '') ~* '(\+?258[[:space:].()-]*)?(8[2-7]|9[0-9])([[:space:].()-]*[0-9]){7}'
     or coalesce(_message, '') ~* '(^|[[:space:]])@[[:alnum:]_.]{3,}'
     or coalesce(_message, '') ~* 'whats?app|wpp|telegram|instagram|facebook|messenger|signal|tiktok|viber|snapchat|imo';
-$;
+$contact_guard$;
 revoke all on function public.vilashop_message_contains_external_contact(text) from public, anon, authenticated;
 
 create or replace function public.create_listing_offer(_listing_id uuid, _amount numeric, _message text default null)
 returns public.listing_offers language plpgsql security definer set search_path = ''
-as $
+as $offer_function$
 declare l public.listings; result_row public.listing_offers; uid uuid := auth.uid();
 begin
   if uid is null or not exists (select 1 from public.profiles p where p.id = uid) then
@@ -251,7 +251,7 @@ begin
     'Recebeu uma proposta para "' || l.title || '".','offer',result_row.id);
   return result_row;
 end;
-$$;
+$offer_function$;
 revoke all on function public.create_listing_offer(uuid,numeric,text) from public, anon;
 grant execute on function public.create_listing_offer(uuid,numeric,text) to authenticated;
 
