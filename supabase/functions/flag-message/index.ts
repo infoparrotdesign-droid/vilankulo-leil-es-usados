@@ -79,6 +79,19 @@ Deno.serve(async (request: Request) => {
     const { data: userData, error: authError } = await admin.auth.getUser(jwt);
     if (authError || !userData.user) return json({ error: "Invalid session" }, 401);
 
+    // A successful prior flag is idempotent: do not count or email it again.
+    const { data: priorFlag, error: priorFlagError } = await admin
+      .from("message_moderation_flags")
+      .select("id, email_status")
+      .eq("message_id", messageId)
+      .eq("category", category)
+      .eq("flagged_by", userData.user.id)
+      .maybeSingle();
+    if (priorFlagError) throw priorFlagError;
+    if (priorFlag?.email_status === "sent") {
+      return json({ ok: true, flagId: priorFlag.id, duplicate: true, notificationSent: true });
+    }
+
     const windowStart = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     const { count, error: countError } = await admin
       .from("message_moderation_flags")
