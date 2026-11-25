@@ -215,10 +215,10 @@ immutable
 set search_path = ''
 as $
   select
-    coalesce(_message, '') ~* '(^|[^[:alnum:]_.+-])[[:alnum:]._%+-]+@[[:alnum:].-]+\\.[A-Za-z]{2,}([^[:alnum:]_.-]|$)'
-    or coalesce(_message, '') ~* 'https?://|www\\.'
-    or coalesce(_message, '') ~* '(^|[^[:alnum:]])[[:alnum:]-]+\\.(com|net|org|mz|co|app|io|me|info|biz|site|online|store|link)(/|[^[:alnum:]]|$)'
-    or coalesce(_message, '') ~* '(\\+?258[[:space:].()-]*)?(8[2-7]|9[0-9])([[:space:].()-]*[0-9]){7}'
+    coalesce(_message, '') ~* '(^|[^[:alnum:]_.+-])[[:alnum:]._%+-]+@[[:alnum:].-]+\.[A-Za-z]{2,}([^[:alnum:]_.-]|$)'
+    or coalesce(_message, '') ~* 'https?://|www\.'
+    or coalesce(_message, '') ~* '(^|[^[:alnum:]])[[:alnum:]-]+\.(com|net|org|mz|co|app|io|me|info|biz|site|online|store|link)(/|[^[:alnum:]]|$)'
+    or coalesce(_message, '') ~* '(\+?258[[:space:].()-]*)?(8[2-7]|9[0-9])([[:space:].()-]*[0-9]){7}'
     or coalesce(_message, '') ~* '(^|[[:space:]])@[[:alnum:]_.]{3,}'
     or coalesce(_message, '') ~* 'whats?app|wpp|telegram|instagram|facebook|messenger|signal|tiktok|viber|snapchat|imo';
 $;
