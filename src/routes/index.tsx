@@ -31,6 +31,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getAdultCutoff, isAdultDateOfBirth, sanitizeImageName } from "@/lib/marketplace-rules";
+import { buildProfileInsertPayload } from "@/lib/profile-payload";
 import { isVilaShopAdminEmail } from "@/lib/vilashop-config";
 import { getActiveListingPhotoUrls } from "@/lib/listing-photos.functions";
 import bicyclePhoto from "@/assets/used-bicycle.jpg";
@@ -466,13 +467,13 @@ function Marketplace() {
       return;
     }
 
-    const { error } = await communityDb.from("profiles").insert({
-      id: sessionUser.id,
-      display_name: name.data,
+    const { error } = await communityDb.from("profiles").insert(buildProfileInsertPayload({
+      userId: sessionUser.id,
+      displayName: name.data,
       phone: phone.data,
       address: address.data,
-      birth_date: birthDate.data,
-    });
+      birthDate: birthDate.data,
+    }));
     setBusy(false);
     if (error) {
       console.error("Could not complete VilaShop profile", error);
