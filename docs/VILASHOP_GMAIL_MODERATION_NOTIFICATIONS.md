@@ -4,7 +4,7 @@
 
 - The authenticated chat participant calls the `flagMessageForModeration` helper when a message is flagged.
 - The `flag-message` Edge Function validates the caller's Supabase session, applies a per-user rate limit, stores the moderation event and invokes the protected `send-admin-notification` function.
-- Email delivery follows a `pending → sending → sent/failed` state transition with an atomic claim, preventing concurrent duplicate requests from sending the same alert twice. Failed deliveries can be retried.
+- Email delivery follows a `pending → sending → sent/failed` state transition with an atomic claim, preventing concurrent duplicate requests from sending the same alert twice. Failed deliveries can be retried. If a worker is interrupted while sending, a `sending` claim older than five minutes can be reclaimed atomically; recent claims remain protected from duplicate delivery.
 - Administrators can read the moderation queue, but database column grants restrict their updates to review status and reviewer metadata; message content and email-delivery records remain service-managed.
 - The email is sent from `info.parrotdesign@gmail.com` to both `info.parrotdesign@gmail.com` and `adminvilashop@gmail.com`.
 - The notification includes category, message/conversation references, the reporting account ID and a short excerpt. The full flagged text remains in the admin-only moderation table.

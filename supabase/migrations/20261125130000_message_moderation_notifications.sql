@@ -19,12 +19,14 @@ create table if not exists public.message_moderation_flags (
   email_status text not null default 'pending'
     check (email_status in ('pending','sending','sent','failed')),
   email_message_id text,
+  email_started_at timestamptz,
   email_error text,
   created_at timestamptz not null default now(),
   reviewed_at timestamptz,
   reviewed_by uuid references auth.users(id) on delete set null,
   unique (message_id, category, flagged_by),
-  check ((reviewed_at is null) = (reviewed_by is null))
+  check ((reviewed_at is null) = (reviewed_by is null)),
+  check (email_status <> 'sending' or email_started_at is not null)
 );
 
 create index if not exists message_moderation_flags_queue_idx

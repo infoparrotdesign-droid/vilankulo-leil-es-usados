@@ -127,7 +127,9 @@ jobs:
       - name: Configure Gmail OAuth secrets in Supabase
         shell: bash
         run: |
-          MAILER_TOKEN="$(printf 'vilashop-mailer:%s' "$SUPABASE_ACCESS_TOKEN" | sha256sum | cut -d' ' -f1)"
+          MAILER_TOKEN="$(openssl rand -hex 32)"
+          echo "::add-mask::$MAILER_TOKEN"
+          printf '%s\n' "VILASHOP_MAILER_TOKEN=$MAILER_TOKEN" >> "$GITHUB_ENV"
           supabase secrets set --yes --project-ref "$SUPABASE_PROJECT_ID" \\
             "GMAIL_CLIENT_ID=$GMAIL_CLIENT_ID" \\
             "GMAIL_CLIENT_SECRET=$GMAIL_CLIENT_SECRET" \\
@@ -154,10 +156,10 @@ jobs:
         if: ${{ inputs.send_test_notification == true }}
         shell: bash
         run: |
-          MAILER_TOKEN="$(printf 'vilashop-mailer:%s' "$SUPABASE_ACCESS_TOKEN" | sha256sum | cut -d' ' -f1)"
+          test -n "$VILASHOP_MAILER_TOKEN" || { echo "::error::Mailer token was not generated"; exit 1; }
           curl --fail-with-body --silent --show-error \\
             --request POST \\
-            --header "x-vilashop-mailer-token: $MAILER_TOKEN" \\
+            --header "x-vilashop-mailer-token: $VILASHOP_MAILER_TOKEN" \\
             --header "Content-Type: application/json" \\
             --data '{"title":"Teste de configuração Gmail","event":"Teste de entrega","message":"O envio de notificações administrativas do VilaShop está a funcionar.","reference":"GMAIL-CONFIG-TEST"}' \\
             "https://ibwasunbdqplanwhnexf.supabase.co/functions/v1/send-admin-notification"

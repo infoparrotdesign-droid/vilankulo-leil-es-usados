@@ -83,7 +83,7 @@ Deno.serve(async (request: Request) => {
     // Only one concurrent request can move pending/failed to sending.
     const { data: priorFlag, error: priorFlagError } = await admin
       .from("message_moderation_flags")
-      .select("id, email_status, created_at")
+      .select("id, email_status, created_at, email_started_at")
       .eq("message_id", messageId)
       .eq("category", category)
       .eq("flagged_by", userData.user.id)
@@ -92,8 +92,18 @@ Deno.serve(async (request: Request) => {
     if (priorFlag?.email_status === "sent") {
       return json({ ok: true, flagId: priorFlag.id, duplicate: true, notificationSent: true });
     }
+    let staleSendingAt: string | null = null;
     if (priorFlag?.email_status === "sending") {
-      return json({ ok: true, flagId: priorFlag.id, duplicate: true, notificationSent: false }, 202);
+      const startedAt = priorFlag.email_started_at
+        ? Date.parse(priorFlag.email_started_at)
+        : Number.NaN;
+      if (!Number.isFinite(startedAt) || startedAt > Date.now() - 5 * 60 * 1000) {
+        return json(
+          { ok: true, flagId: priorFlag.id, duplicate: true, notificationSent: false },
+          202,
+        );
+      }
+      staleSendingAt = priorFlag.email_started_at;
     }
 
     let storedFlag: { id: string; created_at: string };
@@ -127,7 +137,7 @@ Deno.serve(async (request: Request) => {
       if (insertError?.code === "23505") {
         const { data: existing, error: existingError } = await admin
           .from("message_moderation_flags")
-          .select("id, created_at, email_status")
+          .select("id, created_at, email_status, email_started_at")
           .eq("message_id", messageId)
           .eq("category", category)
           .eq("flagged_by", userData.user.id)
@@ -139,7 +149,16 @@ Deno.serve(async (request: Request) => {
           return json({ ok: true, flagId: existing.id, duplicate: true, notificationSent: true });
         }
         if (existing.email_status === "sending") {
-          return json({ ok: true, flagId: existing.id, duplicate: true, notificationSent: false }, 202);
+          const startedAt = existing.email_started_at
+            ? Date.parse(existing.email_started_at)
+            : Number.NaN;
+          if (!Number.isFinite(startedAt) || startedAt > Date.now() - 5 * 60 * 1000) {
+            return json(
+              { ok: true, flagId: existing.id, duplicate: true, notificationSent: false },
+              202,
+            );
+          }
+          staleSendingAt = existing.email_started_at;
         }
         storedFlag = { id: existing.id, created_at: existing.created_at };
       } else if (insertError || !flag) {
@@ -149,11 +168,18 @@ Deno.serve(async (request: Request) => {
       }
     }
 
-    const { data: claimedFlag, error: claimError } = await admin
+    let claimQuery = admin
       .from("message_moderation_flags")
-      .update({ email_status: "sending", email_error: null })
-      .eq("id", storedFlag.id)
-      .in("email_status", ["pending", "failed"])
+      .update({
+        email_status: "sending",
+        email_started_at: new Date().toISOString(),
+        email_error: null,
+      })
+      .eq("id", storedFlag.id);
+    claimQuery = staleSendingAt
+      ? claimQuery.eq("email_status", "sending").eq("email_started_at", staleSendingAt)
+      : claimQuery.in("email_status", ["pending", "failed"]);
+    const { data: claimedFlag, error: claimError } = await claimQuery
       .select("id")
       .maybeSingle();
     if (claimError) throw claimError;

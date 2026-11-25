@@ -87,4 +87,23 @@ describe("flagMessageForModeration input validation", () => {
       duplicate: false,
     });
   });
+
+  it("reports duplicate flags without treating an unsent alert as delivered", async () => {
+    const mockClient = {
+      functions: {
+        invoke: vi.fn().mockResolvedValue({
+          data: { ok: true, flagId: "flag-2", notificationSent: false, duplicate: true },
+          error: null,
+        }),
+      },
+    } as never;
+
+    const result = await flagMessageForModeration(mockClient, validInput);
+
+    expect(result).toEqual({
+      flagId: "flag-2",
+      notificationSent: false,
+      duplicate: true,
+    });
+  });
 });
