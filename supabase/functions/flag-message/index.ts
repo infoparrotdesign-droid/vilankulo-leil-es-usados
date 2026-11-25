@@ -50,7 +50,11 @@ Deno.serve(async (request: Request) => {
     details?: unknown;
   };
   try {
-    payload = await request.json();
+    const parsed: unknown = await request.json();
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return json({ error: "Invalid request body" }, 400);
+    }
+    payload = parsed as typeof payload;
   } catch {
     return json({ error: "Invalid JSON" }, 400);
   }
@@ -199,10 +203,11 @@ Deno.serve(async (request: Request) => {
     }
     const mailerToken = Deno.env.get("VILASHOP_MAILER_TOKEN");
     if (!mailerToken) {
-      await admin.from("message_moderation_flags").update({
+      const { error: statusError } = await admin.from("message_moderation_flags").update({
         email_status: "failed",
         email_error: "Mailer token is not configured",
       }).eq("id", storedFlag.id);
+      if (statusError) throw statusError;
       return json({ ok: true, flagId: storedFlag.id, notificationSent: false }, 202);
     }
 
@@ -234,23 +239,41 @@ Deno.serve(async (request: Request) => {
         message: emailMessage,
         reference: storedFlag.id,
       }),
+      signal: AbortSignal.timeout(25_000),
     });
 
     if (!mailResponse.ok) {
-      const errorText = await mailResponse.text();
-      await admin.from("message_moderation_flags").update({
+      const { error: statusError } = await admin.from("message_moderation_flags").update({
         email_status: "failed",
-        email_error: "Mailer returned HTTP " + mailResponse.status + ": " + errorText.slice(0, 300),
+        email_error: "Mailer returned HTTP " + mailResponse.status,
       }).eq("id", storedFlag.id);
+      if (statusError) throw statusError;
       return json({ ok: true, flagId: storedFlag.id, notificationSent: false }, 202);
     }
 
-    const mailResult = await mailResponse.json();
-    await admin.from("message_moderation_flags").update({
-      email_status: "sent",
-      email_message_id: typeof mailResult.messageId === "string" ? mailResult.messageId : null,
-      email_error: null,
-    }).eq("id", storedFlag.id);
+    let mailResult: { ok?: unknown; messageId?: unknown };
+    try {
+      mailResult = await mailResponse.json();
+    } catch {
+      throw new Error("Mailer returned an invalid success response");
+    }
+    if (mailResult?.ok !== true || typeof mailResult.messageId !== "string" || !mailResult.messageId) {
+      throw new Error("Mailer returned an incomplete success response");
+    }
+
+    const { data: completedFlag, error: completionError } = await admin
+      .from("message_moderation_flags")
+      .update({
+        email_status: "sent",
+        email_message_id: mailResult.messageId,
+        email_error: null,
+      })
+      .eq("id", storedFlag.id)
+      .eq("email_status", "sending")
+      .select("id")
+      .maybeSingle();
+    if (completionError) throw completionError;
+    if (!completedFlag) throw new Error("Could not confirm the completed email state");
 
     return json({ ok: true, flagId: storedFlag.id, notificationSent: true });
   } catch (error) {

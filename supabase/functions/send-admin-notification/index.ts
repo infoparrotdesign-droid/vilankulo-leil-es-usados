@@ -44,6 +44,7 @@ async function getGoogleAccessToken(): Promise<string> {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: form,
+    signal: AbortSignal.timeout(15_000),
   });
   const data = await response.json();
   if (!response.ok || typeof data.access_token !== "string") {
@@ -64,7 +65,11 @@ Deno.serve(async (request: Request) => {
 
   let payload: { title?: unknown; message?: unknown; event?: unknown; reference?: unknown };
   try {
-    payload = await request.json();
+    const parsed: unknown = await request.json();
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return Response.json({ error: "Invalid notification payload" }, { status: 400 });
+    }
+    payload = parsed as typeof payload;
   } catch {
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
@@ -112,6 +117,7 @@ Deno.serve(async (request: Request) => {
       method: "POST",
       headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
       body: JSON.stringify({ raw: utf8Base64Url(mime) }),
+      signal: AbortSignal.timeout(20_000),
     });
     if (!sent.ok) {
       const detail = await sent.text();

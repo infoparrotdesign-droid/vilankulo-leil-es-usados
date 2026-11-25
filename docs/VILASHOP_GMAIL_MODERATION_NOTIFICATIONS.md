@@ -2,12 +2,13 @@
 
 ## What is implemented
 
-- The authenticated chat participant calls the `flagMessageForModeration` helper when a message is flagged.
+- The `flagMessageForModeration` frontend helper and authenticated `flag-message` Edge Function are available for a future chat/reporting interface to call. The current frontend does not yet have an internal chat screen wired to this action.
 - The `flag-message` Edge Function validates the caller's Supabase session, applies a per-user rate limit, stores the moderation event and invokes the protected `send-admin-notification` function.
-- Email delivery follows a `pending → sending → sent/failed` state transition with an atomic claim, preventing concurrent duplicate requests from sending the same alert twice. Failed deliveries can be retried. If a worker is interrupted while sending, a `sending` claim older than five minutes can be reclaimed atomically; recent claims remain protected from duplicate delivery.
+- Email delivery follows a `pending → sending → sent/failed` state transition with an atomic claim, preventing concurrent requests from claiming the same alert. Failed deliveries can be retried. If a worker is interrupted while sending, a `sending` claim older than five minutes can be reclaimed atomically; recent claims remain protected. This is not an exactly-once guarantee: if Gmail accepts a message but the database confirmation fails, a later recovery may send a duplicate.
 - Administrators can read the moderation queue, but database column grants restrict their updates to review status and reviewer metadata; message content and email-delivery records remain service-managed.
 - The email is sent from `info.parrotdesign@gmail.com` to both `info.parrotdesign@gmail.com` and `adminvilashop@gmail.com`.
 - The notification includes category, message/conversation references, the reporting account ID and a short excerpt. The full flagged text remains in the admin-only moderation table.
+- Both Edge Functions reject non-object JSON payloads. External OAuth/Gmail requests have explicit time limits, and delivery status changes are checked before a successful result is returned.
 - Categories: personal contacts, offensive language, threats, discrimination and other.
 
 ## Important current limitation
