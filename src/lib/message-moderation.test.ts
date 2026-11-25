@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  MESSAGE_FLAG_CATEGORIES,
-  MESSAGE_FLAG_CATEGORY_LABELS,
-} from "./message-moderation";
+import { MESSAGE_FLAG_CATEGORIES, MESSAGE_FLAG_CATEGORY_LABELS } from "./message-moderation";
 
 describe("VilaShop message moderation categories", () => {
   it("supports every administrative alert category", () => {
