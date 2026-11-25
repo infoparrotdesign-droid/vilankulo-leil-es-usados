@@ -17,8 +17,8 @@ The current VilaShop frontend does not yet contain an internal chat/messages tab
 Gmail API is already enabled in the Google Cloud project `VilaShop Notifications`. The OAuth credentials and refresh token were not yet confirmed at the last setup check.
 
 1. In Google Cloud Console, configure the OAuth consent screen and add `info.parrotdesign@gmail.com` as a test user if the app remains in Testing.
-2. Create an OAuth client (Desktop app is suitable for the one-time owner authorization).
-3. Authorize only the scope `https://www.googleapis.com/auth/gmail.send` for `info.parrotdesign@gmail.com` and obtain a refresh token. Use the same Google account as the sender.
+2. Create an OAuth Client ID do tipo Web application e adicione `https://developers.google.com/oauthplayground` como Authorized redirect URI.
+3. Authorize only the scope `https://www.googleapis.com/auth/gmail.send` for `info.parrotdesign@gmail.com` and troque o código por tokens e guarde o refresh token. Use a mesma conta Google do remetente.
 4. In the GitHub repository Settings → Secrets and variables → Actions, add these repository/environment secrets under the `production` environment:
    - `GMAIL_CLIENT_ID`
    - `GMAIL_CLIENT_SECRET`
