@@ -109,3 +109,27 @@ export function getComparableListingPrice(price: number, highestBid: number | nu
     ? highestBid
     : Number.isFinite(price) && price > 0 ? price : Number.POSITIVE_INFINITY;
 }
+
+
+/** Keeps listing titles readable and consistent before persistence. */
+export function normalizeListingTitle(value: string): string {
+  return value.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+/** Removes invisible control characters while preserving paragraph breaks. */
+export function normalizeListingDescription(value: string): string {
+  return value
+    .replace(/\r\n?/g, "\n")
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "")
+    .split("\n")
+    .map((line) => line.replace(/[\t ]+/g, " ").trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** Marketplace amounts are positive, finite and limited to two decimal places. */
+export function isValidMarketplaceAmount(value: number): boolean {
+  return Number.isFinite(value) && value > 0
+    && Math.abs(value * 100 - Math.round(value * 100)) < 1e-7;
+}

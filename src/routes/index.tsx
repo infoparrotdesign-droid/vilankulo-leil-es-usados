@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { calculateSaleBreakdown, calculateSuggestedListingPrice, getAdultCutoff, getComparableListingPrice, isAdultDateOfBirth, isSupportedListingImage, matchesMarketplaceSearch, sanitizeImageName } from "@/lib/marketplace-rules";
+import { calculateSaleBreakdown, calculateSuggestedListingPrice, getAdultCutoff, getComparableListingPrice, isAdultDateOfBirth, isSupportedListingImage, isValidMarketplaceAmount, matchesMarketplaceSearch, normalizeListingDescription, normalizeListingTitle, sanitizeImageName } from "@/lib/marketplace-rules";
 import { buildProfileInsertPayload } from "@/lib/profile-payload";
 import { containsExternalContact, CONTACT_SHARING_ERROR } from "@/lib/message-safety";
 import { isVilaShopAdminEmail } from "@/lib/vilashop-config";
@@ -185,7 +185,7 @@ const listingSchema = z.object({
   category: z.enum(["Eletrónicos", "Casa", "Moda", "Desporto", "Veículos", "Outros"]),
   itemCondition: z.enum(["Como novo", "Bom estado", "Usado"]),
   listingType: z.enum(["sale", "auction", "negotiation"]),
-  price: z.number().positive("Indique um preço válido."),
+  price: z.number().refine(isValidMarketplaceAmount, "Indique um preço positivo com até duas casas decimais."),
   photo: z.instanceof(File).refine(isSupportedListingImage, "Escolha uma foto JPG, PNG ou WebP válida, até 5 MB."),
 });
 
@@ -525,8 +525,8 @@ function Marketplace() {
     const price = Number(data.get("price"));
     const photo = data.get("photo");
     const parsed = listingSchema.safeParse({
-      title: data.get("title"),
-      description: data.get("description"),
+      title: normalizeListingTitle(String(data.get("title") ?? "")),
+      description: normalizeListingDescription(String(data.get("description") ?? "")),
       category: data.get("category"),
       itemCondition: data.get("itemCondition"),
       listingType: data.get("listingType"),
@@ -573,6 +573,7 @@ function Marketplace() {
     setShowCreate(false);
     form.reset();
     setDraftPrice("");
+    setTargetSellerNet("");
     if (submitted) setMyListings((current) => [submitted, ...current.filter((item) => item.id !== submitted.id)]);
     toast.success("Anúncio publicado com sucesso.");
     const { data: refreshed, error: refreshError } = await supabase
@@ -628,7 +629,7 @@ function Marketplace() {
     if (!sessionUser || !profileReady) { setShowLogin(true); toast.info("Entre na sua conta para fazer uma proposta."); return; }
     if (listing.isSample) { toast.info("Este anúncio é apenas um exemplo."); return; }
     const data = new FormData(event.currentTarget);
-    const amount = z.coerce.number().positive().safeParse(data.get("offerAmount"));
+    const amount = z.coerce.number().refine(isValidMarketplaceAmount).safeParse(data.get("offerAmount"));
     if (!amount.success) { toast.error("Indique um valor válido para a proposta."); return; }
     const message = String(data.get("offerMessage") ?? "").trim();
     if (containsExternalContact(message)) { toast.error(CONTACT_SHARING_ERROR); return; }
@@ -721,7 +722,7 @@ function Marketplace() {
       return;
     }
     const amountInput = new FormData(event.currentTarget).get("amount");
-    const amount = z.coerce.number().positive().safeParse(amountInput);
+    const amount = z.coerce.number().refine(isValidMarketplaceAmount).safeParse(amountInput);
     if (!amount.success) {
       toast.error("Indique um lance válido.");
       return;

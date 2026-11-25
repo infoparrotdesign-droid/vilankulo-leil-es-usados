@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateSaleBreakdown, calculateSuggestedListingPrice, getAdultCutoff, getComparableListingPrice, isAdultDateOfBirth, isSupportedListingImage, matchesMarketplaceSearch, MAX_LISTING_IMAGE_SIZE_BYTES, normalizeMarketplaceSearch, sanitizeImageName } from "./marketplace-rules";
+import { calculateSaleBreakdown, calculateSuggestedListingPrice, getAdultCutoff, getComparableListingPrice, isAdultDateOfBirth, isSupportedListingImage, isValidMarketplaceAmount, matchesMarketplaceSearch, MAX_LISTING_IMAGE_SIZE_BYTES, normalizeListingDescription, normalizeListingTitle, normalizeMarketplaceSearch, sanitizeImageName } from "./marketplace-rules";
 
 describe("VilaShop minimum age validation", () => {
   const today = new Date("2026-11-25T12:00:00.000Z");
@@ -141,5 +141,25 @@ describe("VilaShop marketplace search and price sorting", () => {
 
   it("places invalid prices after valid prices", () => {
     expect(getComparableListingPrice(Number.NaN, null)).toBe(Number.POSITIVE_INFINITY);
+  });
+});
+
+
+describe("VilaShop listing text and monetary input rules", () => {
+  it("normalizes titles by removing control characters and repeated whitespace", () => {
+    expect(normalizeListingTitle("  Bicicleta\n  urbana\t usada  ")).toBe("Bicicleta urbana usada");
+  });
+
+  it("preserves description paragraphs while removing invisible control characters", () => {
+    expect(normalizeListingDescription("  Bom estado\r\n\r\n  Sem riscos\u0000\tvisíveis\n\n\nEntrega disponível  "))
+      .toBe("Bom estado\n\nSem riscos visíveis\n\nEntrega disponível");
+  });
+
+  it.each([1, 10.5, 99.99, 0.01])("accepts positive amounts with up to two decimals: %s", (amount) => {
+    expect(isValidMarketplaceAmount(amount)).toBe(true);
+  });
+
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, 1.001])("rejects invalid monetary amounts: %s", (amount) => {
+    expect(isValidMarketplaceAmount(amount)).toBe(false);
   });
 });
