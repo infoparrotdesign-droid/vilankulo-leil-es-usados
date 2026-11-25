@@ -58,4 +58,33 @@ describe("flagMessageForModeration input validation", () => {
     ).rejects.toThrow("A observação excede o limite permitido.");
     expect(client.functions.invoke).not.toHaveBeenCalled();
   });
+
+  it("normalizes input and returns the delivery result", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: { ok: true, flagId: "flag-1", notificationSent: true, duplicate: false },
+      error: null,
+    });
+    const mockClient = { functions: { invoke } } as never;
+
+    const result = await flagMessageForModeration(mockClient, {
+      ...validInput,
+      messageId: " message-1 " ,
+      messageContent: " Mensagem de teste " ,
+      details: " Observação " ,
+    });
+
+    expect(invoke).toHaveBeenCalledWith("flag-message", {
+      body: {
+        ...validInput,
+        messageId: "message-1",
+        messageContent: "Mensagem de teste",
+        details: "Observação",
+      },
+    });
+    expect(result).toEqual({
+      flagId: "flag-1",
+      notificationSent: true,
+      duplicate: false,
+    });
+  });
 });
