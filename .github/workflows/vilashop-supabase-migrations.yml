@@ -39,7 +39,9 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ github.event_name != 'schedule' }}
+    # Production linking, dry-run, and Edge Function deployment are manual-only.
+    # A push to the repository must never perform production operations implicitly.
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     name: Test direct PostgreSQL connection
     runs-on: ubuntu-latest
     environment: production
