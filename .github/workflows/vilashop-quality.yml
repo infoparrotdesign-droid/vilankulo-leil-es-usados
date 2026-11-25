@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - vilashop/rebuild-foundation
+      - vilashop/phase-1-contact-safety
     paths:
       - "src/**"
       - ".env"
@@ -46,6 +47,9 @@ jobs:
       - name: Lint (existing repository baseline)
         run: bun run lint
         continue-on-error: true
+
+      - name: Strict lint for Phase 1 safety changes
+        run: bunx eslint src/lib/message-safety.ts src/lib/message-safety.test.ts
 
       - name: Run tests
         run: bun run test
