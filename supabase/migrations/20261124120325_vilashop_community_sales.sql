@@ -206,9 +206,27 @@ grant select on public.listing_offers to authenticated;
 create policy listing_offers_participant_read on public.listing_offers for select to authenticated
   using (buyer_id = (select auth.uid()) or seller_id = (select auth.uid()) or (select public.is_vilashop_admin()));
 
+-- Shared contact/link guard for negotiation and mediation text.
+-- The helper is not exposed as a callable client RPC; only trusted workflow functions invoke it.
+create or replace function public.vilashop_message_contains_external_contact(_message text)
+returns boolean
+language sql
+immutable
+set search_path = ''
+as $
+  select
+    coalesce(_message, '') ~* '(^|[^[:alnum:]_.+-])[[:alnum:]._%+-]+@[[:alnum:].-]+\\.[A-Za-z]{2,}([^[:alnum:]_.-]|$)'
+    or coalesce(_message, '') ~* 'https?://|www\\.'
+    or coalesce(_message, '') ~* '(^|[^[:alnum:]])[[:alnum:]-]+\\.(com|net|org|mz|co|app|io|me|info|biz|site|online|store|link)(/|[^[:alnum:]]|$)'
+    or coalesce(_message, '') ~* '(\\+?258[[:space:].()-]*)?(8[2-7]|9[0-9])([[:space:].()-]*[0-9]){7}'
+    or coalesce(_message, '') ~* '(^|[[:space:]])@[[:alnum:]_.]{3,}'
+    or coalesce(_message, '') ~* 'whats?app|wpp|telegram|instagram|facebook|messenger|signal|tiktok|viber|snapchat|imo';
+$;
+revoke all on function public.vilashop_message_contains_external_contact(text) from public, anon, authenticated;
+
 create or replace function public.create_listing_offer(_listing_id uuid, _amount numeric, _message text default null)
 returns public.listing_offers language plpgsql security definer set search_path = ''
-as $$
+as $
 declare l public.listings; result_row public.listing_offers; uid uuid := auth.uid();
 begin
   if uid is null or not exists (select 1 from public.profiles p where p.id = uid) then
@@ -220,6 +238,9 @@ begin
     raise exception 'Este anúncio não aceita propostas neste momento.';
   end if;
   if l.seller_id = uid then raise exception 'Não pode negociar o seu próprio anúncio.'; end if;
+  if public.vilashop_message_contains_external_contact(_message) then
+    raise exception 'Por segurança, não partilhe contactos pessoais ou links externos. Mantenha a negociação no VilaShop.';
+  end if;
   if exists (select 1 from public.listing_offers o where o.listing_id = _listing_id and o.buyer_id = uid and o.status = 'pending') then
     raise exception 'Já tem uma proposta pendente para este anúncio.';
   end if;
@@ -247,6 +268,9 @@ begin
   if _decision not in ('accept','reject','counter') then raise exception 'Resposta inválida.'; end if;
   if _decision = 'counter' and (_counter_amount is null or _counter_amount <= 0) then
     raise exception 'Indique o valor da contraproposta.';
+  end if;
+  if public.vilashop_message_contains_external_contact(_message) then
+    raise exception 'Por segurança, não partilhe contactos pessoais ou links externos. Mantenha a negociação no VilaShop.';
   end if;
   update public.listing_offers set
     status = case _decision when 'accept' then 'accepted' when 'reject' then 'rejected' else 'countered' end,
@@ -577,6 +601,10 @@ begin
     raise exception 'A reclamação deve ser apresentada pelo comprador dentro das 48 horas após a entrega comunicada.';
   end if;
   if char_length(btrim(coalesce(_reason,''))) not between 10 and 2000 then raise exception 'Descreva a reclamação (10 a 2000 caracteres).'; end if;
+  if public.vilashop_message_contains_external_contact(_reason)
+    or public.vilashop_message_contains_external_contact(_evidence_note) then
+    raise exception 'Por segurança, não partilhe contactos pessoais ou links externos. Mantenha a mediação no VilaShop.';
+  end if;
   insert into public.sale_disputes(sale_id,opened_by,reason,evidence_note)
   values (_sale_id,uid,btrim(_reason),nullif(btrim(_evidence_note),'')) returning * into result_row;
   update public.marketplace_sales set status='disputed',updated_at=now() where id=_sale_id;
