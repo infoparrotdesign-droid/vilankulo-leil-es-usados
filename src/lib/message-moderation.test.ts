@@ -68,9 +68,9 @@ describe("flagMessageForModeration input validation", () => {
 
     const result = await flagMessageForModeration(mockClient, {
       ...validInput,
-      messageId: " message-1 " ,
-      messageContent: " Mensagem de teste " ,
-      details: " Observação " ,
+      messageId: " message-1 ",
+      messageContent: " Mensagem de teste ",
+      details: " Observação ",
     });
 
     expect(invoke).toHaveBeenCalledWith("flag-message", {
