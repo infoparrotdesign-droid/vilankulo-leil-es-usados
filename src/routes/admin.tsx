@@ -109,7 +109,7 @@ function AdminPage() {
       const { data, error } = await adminDatabase.rpc("is_vilashop_admin");
       if (error || data !== true) {
         setIsAdmin(false);
-        setListings([]); setReports([]); setSales([]); setDisputes([]);
+        setListings([]); setReports([]); setSales([]); setDisputes([]); setMessageFlags([]);
         return false;
       }
 
