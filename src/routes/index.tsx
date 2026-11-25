@@ -454,17 +454,29 @@ function Marketplace() {
       return;
     }
     setBusy(true);
+
+    // The live profiles table intentionally stores only the core profile fields.
+    // Keep seller_kind as non-authoritative profile metadata, not as a DB column.
+    const { error: metadataError } = await supabase.auth.updateUser({
+      data: { seller_kind: sellerKind.data },
+    });
+    if (metadataError) {
+      setBusy(false);
+      toast.error("Não foi possível guardar o tipo de vendedor. Tente novamente.");
+      return;
+    }
+
     const { error } = await communityDb.from("profiles").insert({
       id: sessionUser.id,
       display_name: name.data,
       phone: phone.data,
       address: address.data,
       birth_date: birthDate.data,
-      seller_kind: sellerKind.data,
     });
     setBusy(false);
     if (error) {
-      toast.error("Não foi possível guardar os dados. Verifique a data de nascimento e tente novamente.");
+      console.error("Could not complete VilaShop profile", error);
+      toast.error("Não foi possível guardar os dados do perfil. Verifique os campos e tente novamente.");
       return;
     }
     setProfileReady(true);
