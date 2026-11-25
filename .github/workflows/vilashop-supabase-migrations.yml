@@ -9,6 +9,7 @@ on:
       - "supabase/config.toml"
       - "supabase/functions/cleanup-listing-photos/**"
       - "supabase/functions/send-admin-notification/**"
+      - "supabase/functions/flag-message/**"
       - ".github/workflows/vilashop-supabase-migrations.yml"
   schedule:
     - cron: "17 * * * *"
@@ -24,8 +25,18 @@ on:
         required: true
         type: boolean
         default: false
-      configure_gmail:
-        description: "Publicar credenciais OAuth Gmail guardadas nos GitHub Secrets"
+      deploy_admin_notifications:
+        description: "Configurar Gmail e publicar as funções de alerta de mensagens sinalizadas"
+        required: true
+        type: boolean
+        default: false
+      send_test_notification:
+        description: "Enviar um email de teste para os dois destinatários administrativos"
+        required: true
+        type: boolean
+        default: false
+      deploy_flag_message_endpoint:
+        description: "Publicar o endpoint de sinalização (exige que a migration de moderação já esteja aplicada)"
         required: true
         type: boolean
         default: false
@@ -41,7 +52,7 @@ jobs:
   deploy:
     # Production linking, dry-run, and Edge Function deployment are manual-only.
     # A push to the repository must never perform production operations implicitly.
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.apply_migrations == true || inputs.run_photo_cleanup == true) }}
     name: Test direct PostgreSQL connection
     runs-on: ubuntu-latest
     environment: production
@@ -75,36 +86,6 @@ jobs:
       - name: Preview pending migrations over direct connection only
         run: supabase db push --dry-run --remote="$SUPABASE_PROJECT_ID"
 
-      - name: Configure and deploy 72-hour photo cleanup function
-        if: ${{ github.event_name == 'push' }}
-        shell: bash
-        run: |
-          CLEANUP_TOKEN="$(printf '%s' "$SUPABASE_ACCESS_TOKEN" | sha256sum | cut -d' ' -f1)"
-          supabase secrets set --yes --project-ref "$SUPABASE_PROJECT_ID" "VILASHOP_CLEANUP_TOKEN=$CLEANUP_TOKEN"
-          supabase functions deploy cleanup-listing-photos --project-ref "$SUPABASE_PROJECT_ID" --yes
-
-      - name: Deploy protected Gmail notification function
-        if: ${{ github.event_name == 'push' }}
-        run: supabase functions deploy send-admin-notification --project-ref "$SUPABASE_PROJECT_ID" --yes
-
-      - name: Configure Gmail OAuth secrets from GitHub environment
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.configure_gmail == true }}
-        shell: bash
-        env:
-          GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
-          GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
-          GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
-        run: |
-          test -n "$GMAIL_CLIENT_ID" || { echo "::error::Missing production secret GMAIL_CLIENT_ID"; exit 1; }
-          test -n "$GMAIL_CLIENT_SECRET" || { echo "::error::Missing production secret GMAIL_CLIENT_SECRET"; exit 1; }
-          test -n "$GMAIL_REFRESH_TOKEN" || { echo "::error::Missing production secret GMAIL_REFRESH_TOKEN"; exit 1; }
-          MAILER_TOKEN="$(printf 'vilashop-mailer:%s' "$SUPABASE_ACCESS_TOKEN" | sha256sum | cut -d' ' -f1)"
-          supabase secrets set --yes --project-ref "$SUPABASE_PROJECT_ID" \\
-            "GMAIL_CLIENT_ID=$GMAIL_CLIENT_ID" \\
-            "GMAIL_CLIENT_SECRET=$GMAIL_CLIENT_SECRET" \\
-            "GMAIL_REFRESH_TOKEN=$GMAIL_REFRESH_TOKEN" \\
-            "VILASHOP_MAILER_TOKEN=$MAILER_TOKEN"
-
       - name: Apply pending migrations only when explicitly requested
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.apply_migrations == true }}
         run: supabase db push --yes --remote="$SUPABASE_PROJECT_ID"
@@ -112,6 +93,76 @@ jobs:
       - name: Verify remote migration history
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.apply_migrations == true }}
         run: supabase migration list --remote="$SUPABASE_PROJECT_ID"
+
+  deploy_admin_notifications:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_admin_notifications == true }}
+    name: Configure Gmail and deploy moderation notifications
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
+      GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
+      GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
+      SUPABASE_PROJECT_ID: ibwasunbdqplanwhnexf
+    steps:
+      - name: Validate protected deployment secrets
+        shell: bash
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::Missing production secret SUPABASE_ACCESS_TOKEN"; exit 1; }
+          test -n "$GMAIL_CLIENT_ID" || { echo "::error::Missing production secret GMAIL_CLIENT_ID"; exit 1; }
+          test -n "$GMAIL_CLIENT_SECRET" || { echo "::error::Missing production secret GMAIL_CLIENT_SECRET"; exit 1; }
+          test -n "$GMAIL_REFRESH_TOKEN" || { echo "::error::Missing production secret GMAIL_REFRESH_TOKEN"; exit 1; }
+
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: 3.3.0
+
+      - name: Configure Gmail OAuth secrets in Supabase
+        shell: bash
+        run: |
+          MAILER_TOKEN="$(openssl rand -hex 32)"
+          echo "::add-mask::$MAILER_TOKEN"
+          printf '%s\n' "VILASHOP_MAILER_TOKEN=$MAILER_TOKEN" >> "$GITHUB_ENV"
+          supabase secrets set --yes --project-ref "$SUPABASE_PROJECT_ID" \\
+            "GMAIL_CLIENT_ID=$GMAIL_CLIENT_ID" \\
+            "GMAIL_CLIENT_SECRET=$GMAIL_CLIENT_SECRET" \\
+            "GMAIL_REFRESH_TOKEN=$GMAIL_REFRESH_TOKEN" \\
+            "VILASHOP_MAILER_TOKEN=$MAILER_TOKEN"
+
+      - name: Deploy protected Gmail mailer
+        run: supabase functions deploy send-admin-notification --project-ref "$SUPABASE_PROJECT_ID" --yes
+
+      - name: Verify moderation migration is already applied
+        if: ${{ inputs.deploy_flag_message_endpoint == true }}
+        shell: bash
+        run: |
+          test -n "$SUPABASE_DB_PASSWORD" || { echo "::error::Missing production secret SUPABASE_DB_PASSWORD"; exit 1; }
+          supabase link --project-ref "$SUPABASE_PROJECT_ID" --skip-pooler
+          supabase migration list --remote="$SUPABASE_PROJECT_ID" | tee /tmp/vilashop-migrations.txt
+          grep -Fq "20261125130000" /tmp/vilashop-migrations.txt || { echo "::error::The message moderation migration is not applied. Do not deploy the endpoint yet."; exit 1; }
+
+      - name: Deploy authenticated message-flag endpoint
+        if: ${{ inputs.deploy_flag_message_endpoint == true }}
+        run: supabase functions deploy flag-message --project-ref "$SUPABASE_PROJECT_ID" --yes
+
+      - name: Send optional Gmail delivery test
+        if: ${{ inputs.send_test_notification == true }}
+        shell: bash
+        run: |
+          test -n "$VILASHOP_MAILER_TOKEN" || { echo "::error::Mailer token was not generated"; exit 1; }
+          curl --fail-with-body --silent --show-error \\
+            --request POST \\
+            --header "x-vilashop-mailer-token: $VILASHOP_MAILER_TOKEN" \\
+            --header "Content-Type: application/json" \\
+            --data '{"title":"Teste de configuração Gmail","event":"Teste de entrega","message":"O envio de notificações administrativas do VilaShop está a funcionar.","reference":"GMAIL-CONFIG-TEST"}' \\
+            "https://ibwasunbdqplanwhnexf.supabase.co/functions/v1/send-admin-notification"
 
   cleanup_photos:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.run_photo_cleanup == true) }}

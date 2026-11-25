@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getAdultCutoff, isAdultDateOfBirth, sanitizeImageName } from "@/lib/marketplace-rules";
+import { calculateSaleBreakdown, calculateSuggestedListingPrice, getAdultCutoff, getComparableListingPrice, isAdultDateOfBirth, isSupportedListingImage, isValidMarketplaceAmount, hasValidListingImageSignature, matchesMarketplaceSearch, normalizeListingDescription, normalizeListingTitle, sanitizeImageName } from "@/lib/marketplace-rules";
 import { buildProfileInsertPayload } from "@/lib/profile-payload";
 import { containsExternalContact, CONTACT_SHARING_ERROR } from "@/lib/message-safety";
 import { isVilaShopAdminEmail } from "@/lib/vilashop-config";
@@ -185,8 +185,8 @@ const listingSchema = z.object({
   category: z.enum(["Eletrónicos", "Casa", "Moda", "Desporto", "Veículos", "Outros"]),
   itemCondition: z.enum(["Como novo", "Bom estado", "Usado"]),
   listingType: z.enum(["sale", "auction", "negotiation"]),
-  price: z.number().positive("Indique um preço válido."),
-  photo: z.instanceof(File).refine((file) => Boolean(sanitizeImageName(file.name)), "Escolha uma foto JPG, PNG ou WebP."),
+  price: z.number().refine(isValidMarketplaceAmount, "Indique um preço positivo com até duas casas decimais."),
+  photo: z.instanceof(File).refine(isSupportedListingImage, "Escolha uma foto JPG, PNG ou WebP válida, até 5 MB."),
 });
 
 export const Route = createFileRoute("/")({
@@ -214,6 +214,9 @@ function Marketplace() {
   const [sessionUser, setSessionUser] = useState<User | null>(null);
   const [profileReady, setProfileReady] = useState(false);
   const [liveListings, setLiveListings] = useState<Listing[]>([]);
+  const [listingsLoading, setListingsLoading] = useState(true);
+  const [listingsLoadError, setListingsLoadError] = useState(false);
+  const [listingsRetryKey, setListingsRetryKey] = useState(0);
   const [myListings, setMyListings] = useState<SellerListing[]>([]);
   const [showMyListings, setShowMyListings] = useState(false);
   const [query, setQuery] = useState("");
@@ -228,13 +231,12 @@ function Marketplace() {
   const [draftPrice, setDraftPrice] = useState("");
   const [targetSellerNet, setTargetSellerNet] = useState("");
   const draftListingPrice = Number(draftPrice);
-  const draftCommission = Number.isFinite(draftListingPrice) && draftListingPrice > 0 ? Math.round(draftListingPrice * 0.1 * 100) / 100 : 0;
-  const draftSellerNet = draftListingPrice - draftCommission;
-  const draftBuyerTotal = Number.isFinite(draftListingPrice) && draftListingPrice > 0 ? draftListingPrice : 0;
+  const saleBreakdown = calculateSaleBreakdown(draftListingPrice);
+  const draftCommission = saleBreakdown.commission;
+  const draftSellerNet = saleBreakdown.sellerNet;
+  const draftBuyerTotal = saleBreakdown.buyerTotal;
   const targetNetValue = Number(targetSellerNet);
-  const suggestedListingPrice = Number.isFinite(targetNetValue) && targetNetValue > 0
-    ? Math.ceil((targetNetValue / 0.9) * 100) / 100
-    : 0;
+  const suggestedListingPrice = calculateSuggestedListingPrice(targetNetValue);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isFollowingSeller, setIsFollowingSeller] = useState(false);
   const [publicBidHistory, setPublicBidHistory] = useState<PublicBid[]>([]);
@@ -278,36 +280,46 @@ function Marketplace() {
 
   useEffect(() => {
     let current = true;
-    void (async () => {
-      const { data, error } = await supabase
-        .from("listings")
-        .select("id, seller_id, title, description, category, item_condition, listing_type, price, highest_bid, photo_path, status, created_at")
-        .in("status", ["active", "ended"])
-        .order("created_at", { ascending: false })
-        .limit(48);
+    setListingsLoading(true);
+    setListingsLoadError(false);
 
-      if (!current) return;
-      if (error) {
+    void (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("listings")
+          .select("id, seller_id, title, description, category, item_condition, listing_type, price, highest_bid, photo_path, status, created_at")
+          .in("status", ["active", "ended"])
+          .order("created_at", { ascending: false })
+          .limit(48);
+
+        if (error) throw error;
+        const rows = data ?? [];
+        const photoListingIds = rows.flatMap((row) => row.photo_path ? [row.id] : []);
+        const photos = photoListingIds.length
+          ? await getPhotoUrls({ data: { listingIds: photoListingIds } })
+          : [];
+        if (!current) return;
+
+        const signedUrls = new Map(photos.map((photo) => [photo.listingId, photo.signedUrl]));
+        setLiveListings(rows.flatMap((row) => {
+          const listing = toMarketplaceListing(row, signedUrls.get(row.id) ?? null);
+          return listing ? [listing] : [];
+        }));
+      } catch (error) {
         console.error("Could not load public listings", error);
-        setLiveListings([]);
-        return;
+        if (current) {
+          setLiveListings([]);
+          setListingsLoadError(true);
+        }
+      } finally {
+        if (current) setListingsLoading(false);
       }
-      const rows = data ?? [];
-      const photoListingIds = rows.flatMap((row) => row.photo_path ? [row.id] : []);
-      const photos = photoListingIds.length
-        ? await getPhotoUrls({ data: { listingIds: photoListingIds } })
-        : [];
-      if (!current) return;
-      const signedUrls = new Map(photos.map((photo) => [photo.listingId, photo.signedUrl]));
-      setLiveListings(rows.flatMap((row) => {
-        const listing = toMarketplaceListing(row, signedUrls.get(row.id) ?? null);
-        return listing ? [listing] : [];
-      }));
     })();
+
     return () => {
       current = false;
     };
-  }, []);
+  }, [getPhotoUrls, listingsRetryKey]);
 
   useEffect(() => {
     let current = true;
@@ -360,13 +372,17 @@ function Marketplace() {
   }, [sellerId]);
 
   const visibleListings = useMemo(() => {
-    const items = liveListings.length > 0 ? liveListings : sampleItems;
+    const items = liveListings.length > 0 ? liveListings : usesSamples ? sampleItems : [];
     return items
       .filter((item) => activeCategory === "Todos" || item.category === activeCategory)
       .filter((item) => activeType === "all" || item.listing_type === activeType)
-      .filter((item) => !query || `${item.title} ${item.description} ${item.category}`.toLocaleLowerCase("pt-MZ").includes(query.toLocaleLowerCase("pt-MZ")))
-      .sort((a, b) => sortBy === "price" ? a.price - b.price : 0);
-  }, [activeCategory, activeType, liveListings, query, sortBy]);
+      .filter((item) => matchesMarketplaceSearch(`${item.title} ${item.description} ${item.category}`, query))
+      .sort((a, b) => sortBy === "price"
+        ? getComparableListingPrice(a.price, a.highest_bid) - getComparableListingPrice(b.price, b.highest_bid)
+          || a.title.localeCompare(b.title, "pt-MZ")
+          || a.id.localeCompare(b.id)
+        : 0);
+  }, [activeCategory, activeType, liveListings, query, sortBy, usesSamples]);
 
   function openCreateListing() {
     if (!sessionUser || !profileReady) {
@@ -509,8 +525,8 @@ function Marketplace() {
     const price = Number(data.get("price"));
     const photo = data.get("photo");
     const parsed = listingSchema.safeParse({
-      title: data.get("title"),
-      description: data.get("description"),
+      title: normalizeListingTitle(String(data.get("title") ?? "")),
+      description: normalizeListingDescription(String(data.get("description") ?? "")),
       category: data.get("category"),
       itemCondition: data.get("itemCondition"),
       listingType: data.get("listingType"),
@@ -522,6 +538,19 @@ function Marketplace() {
       return;
     }
     setBusy(true);
+    let imageBytes: Uint8Array;
+    try {
+      imageBytes = new Uint8Array(await parsed.data.photo.slice(0, 16).arrayBuffer());
+    } catch {
+      setBusy(false);
+      toast.error("Não foi possível verificar o conteúdo da fotografia. Escolha outra imagem.");
+      return;
+    }
+    if (!hasValidListingImageSignature(parsed.data.photo.name, parsed.data.photo.type, imageBytes)) {
+      setBusy(false);
+      toast.error("O conteúdo da fotografia não corresponde ao formato indicado. Escolha uma imagem JPG, PNG ou WebP válida.");
+      return;
+    }
     const safeExtension = sanitizeImageName(parsed.data.photo.name);
     const filePath = `${sessionUser.id}/listings/${crypto.randomUUID()}.${safeExtension}`;
     const { error: uploadError } = await supabase.storage.from(imageBucket).upload(filePath, parsed.data.photo, {
@@ -557,6 +586,7 @@ function Marketplace() {
     setShowCreate(false);
     form.reset();
     setDraftPrice("");
+    setTargetSellerNet("");
     if (submitted) setMyListings((current) => [submitted, ...current.filter((item) => item.id !== submitted.id)]);
     toast.success("Anúncio publicado com sucesso.");
     const { data: refreshed, error: refreshError } = await supabase
@@ -612,7 +642,7 @@ function Marketplace() {
     if (!sessionUser || !profileReady) { setShowLogin(true); toast.info("Entre na sua conta para fazer uma proposta."); return; }
     if (listing.isSample) { toast.info("Este anúncio é apenas um exemplo."); return; }
     const data = new FormData(event.currentTarget);
-    const amount = z.coerce.number().positive().safeParse(data.get("offerAmount"));
+    const amount = z.coerce.number().refine(isValidMarketplaceAmount).safeParse(data.get("offerAmount"));
     if (!amount.success) { toast.error("Indique um valor válido para a proposta."); return; }
     const message = String(data.get("offerMessage") ?? "").trim();
     if (containsExternalContact(message)) { toast.error(CONTACT_SHARING_ERROR); return; }
@@ -705,7 +735,7 @@ function Marketplace() {
       return;
     }
     const amountInput = new FormData(event.currentTarget).get("amount");
-    const amount = z.coerce.number().positive().safeParse(amountInput);
+    const amount = z.coerce.number().refine(isValidMarketplaceAmount).safeParse(amountInput);
     if (!amount.success) {
       toast.error("Indique um lance válido.");
       return;
@@ -730,8 +760,9 @@ function Marketplace() {
     }
   }
 
-  const usesSamples = liveListings.length === 0;
+  const usesSamples = !listingsLoading && !listingsLoadError && liveListings.length === 0;
   const currentBid = selectedListing?.highest_bid ?? selectedListing?.price ?? 0;
+  const hasActiveFilters = Boolean(query.trim()) || activeCategory !== "Todos" || activeType !== "all";
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -827,14 +858,19 @@ function Marketplace() {
         </div>
         <div className="market-filter-row">
           <div className="market-filter-group" aria-label="Tipo de anúncio">
-            {[{ id: "all", label: "Todos" }, { id: "sale", label: "À venda" }, { id: "auction", label: "Leilões" }, { id: "negotiation", label: "Negociação" }].map((filter) => <Button key={filter.id} type="button" variant={activeType === filter.id ? "default" : "ghost"} size="sm" className={`market-filter-pill ${activeType === filter.id ? "is-selected" : ""}`} onClick={() => setActiveType(filter.id as "all" | ListingType)}>{filter.id === "auction" && <Gavel size={14} />}{filter.label}</Button>)}
+            {[{ id: "all", label: "Todos" }, { id: "sale", label: "À venda" }, { id: "auction", label: "Leilões" }, { id: "negotiation", label: "Negociação" }].map((filter) => <Button key={filter.id} type="button" variant={activeType === filter.id ? "default" : "ghost"} size="sm" className={`market-filter-pill ${activeType === filter.id ? "is-selected" : ""}`} aria-pressed={activeType === filter.id} onClick={() => setActiveType(filter.id as "all" | ListingType)}>{filter.id === "auction" && <Gavel size={14} />}{filter.label}</Button>)}
           </div>
           <label className="market-sort-label" htmlFor="sort-listings"><ArrowDownUp size={15} /><span>Ordenar:</span><select id="sort-listings" value={sortBy} onChange={(event) => setSortBy(event.target.value as "recent" | "price")} className="market-sort-select"><option value="recent">Recentes</option><option value="price">Menor preço</option></select><ChevronDown size={14} /></label>
         </div>
         <div className="market-category-chips" aria-label="Categorias">
-          {categories.map((category) => <Button key={category} type="button" variant="ghost" size="sm" onClick={() => setActiveCategory(category)} className={`market-chip ${activeCategory === category ? "is-current" : ""}`}>{category}</Button>)}
+          {categories.map((category) => <Button key={category} type="button" variant="ghost" size="sm" onClick={() => setActiveCategory(category)} className={`market-chip ${activeCategory === category ? "is-current" : ""}`} aria-pressed={activeCategory === category}>{category}</Button>)}
         </div>
-        {visibleListings.length > 0 ? (
+        {!listingsLoading && !listingsLoadError && <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground" aria-live="polite" aria-atomic="true"><span>{visibleListings.length} {visibleListings.length === 1 ? "anúncio encontrado" : "anúncios encontrados"}</span>{hasActiveFilters && <Button type="button" variant="ghost" size="sm" onClick={() => { setQuery(""); setActiveCategory("Todos"); setActiveType("all"); }}>Limpar filtros</Button>}</div>}
+        {listingsLoading ? (
+          <div className="market-empty-results" role="status" aria-live="polite"><span className="market-empty-icon"><Search size={23} /></span><h3>A carregar os anúncios</h3><p>Estamos a procurar as novidades da comunidade VilaShop.</p></div>
+        ) : listingsLoadError ? (
+          <div className="market-empty-results" role="alert"><span className="market-empty-icon"><Search size={23} /></span><h3>Não foi possível carregar os anúncios</h3><p>Verifique a sua ligação e tente novamente. Os exemplos não substituem anúncios reais.</p><Button type="button" variant="outline" onClick={() => setListingsRetryKey((value) => value + 1)}>Tentar novamente</Button></div>
+        ) : visibleListings.length > 0 ? (
           <div className="market-listing-grid">
             {visibleListings.map((listing) => <ListingCard key={listing.id} listing={listing} onOpen={() => setSelectedListing(listing)} />)}
           </div>
@@ -931,7 +967,7 @@ function Marketplace() {
             </div>
             {draftBuyerTotal > 0 && <div className="rounded-xl border border-border bg-card p-3 text-sm"><p className="mb-2 font-semibold">Resumo da sua venda</p><p className="flex justify-between gap-3"><span>Comprador paga</span><strong>{formatPrice(draftBuyerTotal)}</strong></p><p className="mt-1 flex justify-between gap-3 text-muted-foreground"><span>Comissão VilaShop (10%)</span><span>− {formatPrice(draftCommission)}</span></p><p className="mt-2 flex justify-between gap-3 border-t pt-2 text-base"><strong>Você recebe (90%)</strong><strong>{formatPrice(draftSellerNet)}</strong></p><p className="mt-2 text-xs text-muted-foreground">A comissão só é retida numa venda concluída. Não é cobrada para publicar o anúncio.</p></div>}
             <fieldset className="market-listing-type"><legend>Como quer vender?</legend><label className="market-radio-line"><input type="radio" name="listingType" value="sale" defaultChecked /><span><strong>Venda directa</strong><small>Defina o preço final.</small></span></label><label className="market-radio-line"><input type="radio" name="listingType" value="negotiation" /><span><strong>Negociação</strong><small>Receba propostas e envie contrapropostas.</small></span></label><label className="market-radio-line"><input type="radio" name="listingType" value="auction" /><span><strong>Leilão</strong><small>Receba lances durante 3 dias.</small></span><Gavel size={17} /></label></fieldset>
-            <FormField label="Foto do artigo" htmlFor="listing-photo"><div className="market-upload-line"><ImagePlus size={18} /><span>Uma foto clara ajuda o artigo a destacar-se.</span></div><Input id="listing-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required aria-label="Escolher foto do artigo" /></FormField>
+            <FormField label="Foto do artigo" htmlFor="listing-photo"><div className="market-upload-line"><ImagePlus size={18} /><span>JPG, PNG ou WebP até 5 MB. Uma foto clara ajuda o artigo a destacar-se.</span></div><Input id="listing-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required aria-label="Escolher foto do artigo" /></FormField>
             <div className="market-private-note"><ShieldCheck size={16} /><span>Use fotos suas. O seu endereço e telefone não ficam visíveis no anúncio.</span></div>
             <Button type="submit" disabled={busy} className="market-form-submit">{busy ? "A publicar…" : "Publicar anúncio"}<ArrowRight size={17} /></Button>
           </form>
