@@ -431,14 +431,23 @@ function AdminPage() {
                     discrimination: "Discriminação",
                     other: "Outro conteúdo",
                   } as Record<string, string>)[flag.category] ?? "Mensagem sinalizada"}</strong>
-                  <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold">{flag.review_status}</span>
+                  <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold">{({
+                    open: "Pendente",
+                    under_review: "Em análise",
+                    resolved: "Resolvida",
+                    dismissed: "Arquivada",
+                  } as Record<string, string>)[flag.review_status] ?? "Estado desconhecido"}</span>
                 </div>
                 <p className="mt-3 whitespace-pre-wrap rounded-lg bg-muted p-3 text-sm">{flag.message_content}</p>
                 {flag.details && <p className="mt-2 text-sm text-muted-foreground">Observação: {flag.details}</p>}
                 <div className="mt-3 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
                   <span>Referência: {flag.message_id}</span>
                   <span>Utilizador que sinalizou: {flag.flagged_by.slice(0, 8)}</span>
-                  <span>Notificação Gmail: {flag.email_status}</span>
+                  <span>Notificação Gmail: {({
+                    pending: "Pendente",
+                    sent: "Enviada",
+                    failed: "Falhou",
+                  } as Record<string, string>)[flag.email_status] ?? "Desconhecido"}</span>
                   <span>Data: {new Date(flag.created_at).toLocaleString("pt-MZ")}</span>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
