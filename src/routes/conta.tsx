@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { containsExternalContact, CONTACT_SHARING_ERROR } from "@/lib/message-safety";
 
 type ApiError = { message: string };
 type ApiResult<T> = { data: T | null; error: ApiError | null };
@@ -131,6 +132,10 @@ function AccountPage() {
     const value = disputes[saleId];
     if (!value?.reason?.trim() || value.reason.trim().length < 10) {
       toast.error("Explique a reclamação com pelo menos 10 caracteres.");
+      return;
+    }
+    if (containsExternalContact(value.reason) || containsExternalContact(value.evidence ?? "")) {
+      toast.error(CONTACT_SHARING_ERROR);
       return;
     }
     await callAction("open_sale_dispute", { _sale_id: saleId, _reason: value.reason, _evidence_note: value.evidence }, "Reclamação registada. A liquidação fica suspensa.");
