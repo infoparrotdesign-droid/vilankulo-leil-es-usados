@@ -22,6 +22,19 @@ type AdminListing = {
   seller_id: string;
 };
 
+type AdminMessageFlag = {
+  id: string;
+  message_id: string;
+  conversation_id: string | null;
+  flagged_by: string;
+  category: string;
+  message_content: string;
+  details: string | null;
+  review_status: string;
+  email_status: string;
+  created_at: string;
+};
+
 type AdminDatabase = {
   from: (table: string) => any;
   rpc: (functionName: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
@@ -54,21 +67,25 @@ function AdminPage() {
   const [reports, setReports] = useState<any[]>([]);
   const [sales, setSales] = useState<any[]>([]);
   const [disputes, setDisputes] = useState<any[]>([]);
+  const [messageFlags, setMessageFlags] = useState<AdminMessageFlag[]>([]);
   const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
 
   const loadQueue = useCallback(async () => {
-    const [listingResult, reportResult, saleResult, disputeResult] = await Promise.all([
+    const [listingResult, reportResult, saleResult, disputeResult, messageFlagResult] = await Promise.all([
       adminDatabase.from("listings").select("id,title,description,category,item_condition,listing_type,price,status,created_at,seller_id").eq("status","pending_review").order("created_at",{ascending:true}).limit(50),
       adminDatabase.from("listing_reports").select("id,listing_id,reporter_id,reason,details,status,created_at").order("created_at",{ascending:true}).limit(50),
       adminDatabase.from("marketplace_sales").select("id,listing_id,buyer_id,seller_id,agreed_price,commission_amount,buyer_total_amount,seller_net_amount,status,payment_reference,created_at").order("created_at",{ascending:false}).limit(100),
       adminDatabase.from("sale_disputes").select("id,sale_id,opened_by,reason,evidence_note,status,created_at").order("created_at",{ascending:true}).limit(50),
+      adminDatabase.from("message_moderation_flags").select("id,message_id,conversation_id,flagged_by,category,message_content,details,review_status,email_status,created_at").order("created_at",{ascending:false}).limit(100),
     ]);
     if (listingResult.error) toast.error("Não foi possível carregar a fila de anúncios.");
     if (reportResult.error || saleResult.error || disputeResult.error) toast.error("Algumas filas aguardam a aplicação da migration comunitária.");
+    if (messageFlagResult.error) toast.error("A fila de mensagens sinalizadas ficará disponível após a migration de moderação.");
     setListings(listingResult.data ?? []);
     setReports(reportResult.data ?? []);
     setSales(saleResult.data ?? []);
     setDisputes(disputeResult.data ?? []);
+    setMessageFlags(messageFlagResult.data ?? []);
   }, []);
 
   const verifyAdmin = useCallback(async (): Promise<boolean> => {
@@ -78,14 +95,14 @@ function AdminPage() {
       if (userError || !userData.user) {
         setSignedInEmail(null);
         setIsAdmin(false);
-        setListings([]); setReports([]); setSales([]); setDisputes([]);
+        setListings([]); setReports([]); setSales([]); setDisputes([]); setMessageFlags([]);
         return false;
       }
 
       setSignedInEmail(userData.user.email ?? null);
       if (!isVilaShopAdminEmail(userData.user.email)) {
         setIsAdmin(false);
-        setListings([]); setReports([]); setSales([]); setDisputes([]);
+        setListings([]); setReports([]); setSales([]); setDisputes([]); setMessageFlags([]);
         return false;
       }
 
@@ -102,7 +119,7 @@ function AdminPage() {
     } catch (error) {
       console.error("Falha ao validar permissões administrativas.", error);
       setIsAdmin(false);
-      setListings([]); setReports([]); setSales([]); setDisputes([]);
+      setListings([]); setReports([]); setSales([]); setDisputes([]); setMessageFlags([]);
       return false;
     } finally {
       setChecking(false);
@@ -142,7 +159,7 @@ function AdminPage() {
     }
     setSignedInEmail(null);
     setIsAdmin(false);
-    setListings([]); setReports([]); setSales([]); setDisputes([]);
+    setListings([]); setReports([]); setSales([]); setDisputes([]); setMessageFlags([]);
     toast.success("Sessão terminada.");
   }
 
@@ -152,6 +169,28 @@ function AdminPage() {
     setBusy(false);
     if (error) toast.error(error.message);
     else { toast.success(success); await loadQueue(); }
+  }
+
+  async function reviewMessageFlag(flagId: string, reviewStatus: "under_review" | "resolved" | "dismissed") {
+    setBusy(true);
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData.user) {
+      setBusy(false);
+      toast.error("A sessão administrativa expirou. Entre novamente.");
+      return;
+    }
+    const { error } = await adminDatabase.from("message_moderation_flags").update({
+      review_status: reviewStatus,
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: userData.user.id,
+    }).eq("id", flagId);
+    setBusy(false);
+    if (error) {
+      toast.error("Não foi possível actualizar a sinalização.");
+      return;
+    }
+    toast.success("Estado da mensagem sinalizada actualizado.");
+    await loadQueue();
   }
 
   async function moderate(listing: AdminListing, decision: "approve" | "reject" | "suspend") {
@@ -370,6 +409,42 @@ function AdminPage() {
                 <div className="mt-2 flex flex-wrap gap-2">
                   <Button size="sm" disabled={busy || (adminNotes[item.id] ?? "").trim().length < 10} onClick={() => void runAdminAction("admin_resolve_sale_dispute", { _dispute_id: item.id, _resolution: "resolved_seller", _note: adminNotes[item.id] }, "Reclamação resolvida a favor do vendedor.")}>A favor do vendedor</Button>
                   <Button size="sm" variant="destructive" disabled={busy || (adminNotes[item.id] ?? "").trim().length < 10} onClick={() => void runAdminAction("admin_resolve_sale_dispute", { _dispute_id: item.id, _resolution: "resolved_buyer", _note: adminNotes[item.id] }, "Reclamação resolvida a favor do comprador.")}>A favor do comprador</Button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-8">
+          <h2 className="mb-3 text-lg font-semibold">Mensagens sinalizadas</h2>
+          <p className="mb-3 text-sm text-muted-foreground">Conteúdo privado disponível apenas para a administração. Reveja cada caso e registe o estado.</p>
+          <div className="grid gap-3">
+            {messageFlags.length === 0 ? (
+              <p className="rounded-xl border border-dashed bg-card p-5 text-sm text-muted-foreground">Não existem mensagens sinalizadas ou a migration de moderação ainda não foi aplicada.</p>
+            ) : messageFlags.map((flag) => (
+              <article key={flag.id} className="rounded-xl border bg-card p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <strong>{({
+                    personal_contact: "Contactos pessoais",
+                    offensive_language: "Linguagem ofensiva",
+                    threat: "Ameaça",
+                    discrimination: "Discriminação",
+                    other: "Outro conteúdo",
+                  } as Record<string, string>)[flag.category] ?? "Mensagem sinalizada"}</strong>
+                  <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold">{flag.review_status}</span>
+                </div>
+                <p className="mt-3 whitespace-pre-wrap rounded-lg bg-muted p-3 text-sm">{flag.message_content}</p>
+                {flag.details && <p className="mt-2 text-sm text-muted-foreground">Observação: {flag.details}</p>}
+                <div className="mt-3 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+                  <span>Referência: {flag.message_id}</span>
+                  <span>Utilizador que sinalizou: {flag.flagged_by.slice(0, 8)}</span>
+                  <span>Notificação Gmail: {flag.email_status}</span>
+                  <span>Data: {new Date(flag.created_at).toLocaleString("pt-MZ")}</span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" disabled={busy || flag.review_status === "under_review"} onClick={() => void reviewMessageFlag(flag.id, "under_review")}>Em análise</Button>
+                  <Button size="sm" disabled={busy || flag.review_status === "resolved"} onClick={() => void reviewMessageFlag(flag.id, "resolved")}>Resolver</Button>
+                  <Button size="sm" variant="destructive" disabled={busy || flag.review_status === "dismissed"} onClick={() => void reviewMessageFlag(flag.id, "dismissed")}>Arquivar</Button>
                 </div>
               </article>
             ))}
