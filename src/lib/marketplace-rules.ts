@@ -89,3 +89,23 @@ export function calculateSuggestedListingPrice(
 
   return Math.ceil((desiredSellerNet / (1 - commissionRate)) * 100 - Number.EPSILON) / 100;
 }
+
+
+/** Normalizes Portuguese marketplace text for forgiving, accent-insensitive search. */
+export function normalizeMarketplaceSearch(value: string): string {
+  return value.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLocaleLowerCase("pt-MZ").trim().replace(/\\s+/g, " ");
+}
+
+/** Every search term must match, regardless of order or diacritics. */
+export function matchesMarketplaceSearch(text: string, query: string): boolean {
+  const normalizedText = normalizeMarketplaceSearch(text);
+  const terms = normalizeMarketplaceSearch(query).split(" ").filter(Boolean);
+  return terms.every((term) => normalizedText.includes(term));
+}
+
+/** Auctions are compared using the current bid when one exists. */
+export function getComparableListingPrice(price: number, highestBid: number | null): number {
+  return highestBid !== null && Number.isFinite(highestBid) && highestBid > 0
+    ? highestBid
+    : Number.isFinite(price) && price > 0 ? price : Number.POSITIVE_INFINITY;
+}

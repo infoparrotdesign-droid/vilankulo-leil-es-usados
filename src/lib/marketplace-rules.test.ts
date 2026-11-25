@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateSaleBreakdown, calculateSuggestedListingPrice, getAdultCutoff, isAdultDateOfBirth, isSupportedListingImage, MAX_LISTING_IMAGE_SIZE_BYTES, sanitizeImageName } from "./marketplace-rules";
+import { calculateSaleBreakdown, calculateSuggestedListingPrice, getAdultCutoff, getComparableListingPrice, isAdultDateOfBirth, isSupportedListingImage, matchesMarketplaceSearch, MAX_LISTING_IMAGE_SIZE_BYTES, normalizeMarketplaceSearch, sanitizeImageName } from "./marketplace-rules";
 
 describe("VilaShop minimum age validation", () => {
   const today = new Date("2026-11-25T12:00:00.000Z");
@@ -118,5 +118,28 @@ describe("VilaShop listing image upload validation", () => {
   it("rejects unsupported extensions even when the MIME type looks valid", () => {
     expect(isSupportedListingImage({ ...validImage, name: "imagem.gif" })).toBe(false);
     expect(isSupportedListingImage({ ...validImage, name: "document.pdf", type: "image/png" })).toBe(false);
+  });
+});
+
+
+describe("VilaShop marketplace search and price sorting", () => {
+  it("normalizes accents, casing and repeated whitespace", () => {
+    expect(normalizeMarketplaceSearch("  TELEFÓNE  móvel  ")).toBe("telefone movel");
+  });
+
+  it("matches all search terms independent of order and accents", () => {
+    expect(matchesMarketplaceSearch("Telemóvel Android em bom estado", "BOM telemovel")).toBe(true);
+    expect(matchesMarketplaceSearch("Telemóvel Android em bom estado", "telemovel bicicleta")).toBe(false);
+    expect(matchesMarketplaceSearch("Qualquer artigo", "   ")).toBe(true);
+  });
+
+  it("uses current bids as auction prices and falls back to asking price", () => {
+    expect(getComparableListingPrice(4500, 5200)).toBe(5200);
+    expect(getComparableListingPrice(4500, null)).toBe(4500);
+    expect(getComparableListingPrice(4500, Number.NaN)).toBe(4500);
+  });
+
+  it("places invalid prices after valid prices", () => {
+    expect(getComparableListingPrice(Number.NaN, null)).toBe(Number.POSITIVE_INFINITY);
   });
 });

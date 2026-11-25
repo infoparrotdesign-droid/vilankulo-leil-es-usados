@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { calculateSaleBreakdown, calculateSuggestedListingPrice, getAdultCutoff, isAdultDateOfBirth, isSupportedListingImage, sanitizeImageName } from "@/lib/marketplace-rules";
+import { calculateSaleBreakdown, calculateSuggestedListingPrice, getAdultCutoff, getComparableListingPrice, isAdultDateOfBirth, isSupportedListingImage, matchesMarketplaceSearch, sanitizeImageName } from "@/lib/marketplace-rules";
 import { buildProfileInsertPayload } from "@/lib/profile-payload";
 import { containsExternalContact, CONTACT_SHARING_ERROR } from "@/lib/message-safety";
 import { isVilaShopAdminEmail } from "@/lib/vilashop-config";
@@ -376,8 +376,12 @@ function Marketplace() {
     return items
       .filter((item) => activeCategory === "Todos" || item.category === activeCategory)
       .filter((item) => activeType === "all" || item.listing_type === activeType)
-      .filter((item) => !query || `${item.title} ${item.description} ${item.category}`.toLocaleLowerCase("pt-MZ").includes(query.toLocaleLowerCase("pt-MZ")))
-      .sort((a, b) => sortBy === "price" ? a.price - b.price : 0);
+      .filter((item) => matchesMarketplaceSearch(`${item.title} ${item.description} ${item.category}`, query))
+      .sort((a, b) => sortBy === "price"
+        ? getComparableListingPrice(a.price, a.highest_bid) - getComparableListingPrice(b.price, b.highest_bid)
+          || a.title.localeCompare(b.title, "pt-MZ")
+          || a.id.localeCompare(b.id)
+        : 0);
   }, [activeCategory, activeType, liveListings, query, sortBy, usesSamples]);
 
   function openCreateListing() {
@@ -744,6 +748,7 @@ function Marketplace() {
 
   const usesSamples = !listingsLoading && !listingsLoadError && liveListings.length === 0;
   const currentBid = selectedListing?.highest_bid ?? selectedListing?.price ?? 0;
+  const hasActiveFilters = Boolean(query.trim()) || activeCategory !== "Todos" || activeType !== "all";
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -839,13 +844,14 @@ function Marketplace() {
         </div>
         <div className="market-filter-row">
           <div className="market-filter-group" aria-label="Tipo de anúncio">
-            {[{ id: "all", label: "Todos" }, { id: "sale", label: "À venda" }, { id: "auction", label: "Leilões" }, { id: "negotiation", label: "Negociação" }].map((filter) => <Button key={filter.id} type="button" variant={activeType === filter.id ? "default" : "ghost"} size="sm" className={`market-filter-pill ${activeType === filter.id ? "is-selected" : ""}`} onClick={() => setActiveType(filter.id as "all" | ListingType)}>{filter.id === "auction" && <Gavel size={14} />}{filter.label}</Button>)}
+            {[{ id: "all", label: "Todos" }, { id: "sale", label: "À venda" }, { id: "auction", label: "Leilões" }, { id: "negotiation", label: "Negociação" }].map((filter) => <Button key={filter.id} type="button" variant={activeType === filter.id ? "default" : "ghost"} size="sm" className={`market-filter-pill ${activeType === filter.id ? "is-selected" : ""}`} aria-pressed={activeType === filter.id} onClick={() => setActiveType(filter.id as "all" | ListingType)}>{filter.id === "auction" && <Gavel size={14} />}{filter.label}</Button>)}
           </div>
           <label className="market-sort-label" htmlFor="sort-listings"><ArrowDownUp size={15} /><span>Ordenar:</span><select id="sort-listings" value={sortBy} onChange={(event) => setSortBy(event.target.value as "recent" | "price")} className="market-sort-select"><option value="recent">Recentes</option><option value="price">Menor preço</option></select><ChevronDown size={14} /></label>
         </div>
         <div className="market-category-chips" aria-label="Categorias">
-          {categories.map((category) => <Button key={category} type="button" variant="ghost" size="sm" onClick={() => setActiveCategory(category)} className={`market-chip ${activeCategory === category ? "is-current" : ""}`}>{category}</Button>)}
+          {categories.map((category) => <Button key={category} type="button" variant="ghost" size="sm" onClick={() => setActiveCategory(category)} className={`market-chip ${activeCategory === category ? "is-current" : ""}`} aria-pressed={activeCategory === category}>{category}</Button>)}
         </div>
+        {!listingsLoading && !listingsLoadError && <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground" aria-live="polite" aria-atomic="true"><span>{visibleListings.length} {visibleListings.length === 1 ? "anúncio encontrado" : "anúncios encontrados"}</span>{hasActiveFilters && <Button type="button" variant="ghost" size="sm" onClick={() => { setQuery(""); setActiveCategory("Todos"); setActiveType("all"); }}>Limpar filtros</Button>}</div>}
         {listingsLoading ? (
           <div className="market-empty-results" role="status" aria-live="polite"><span className="market-empty-icon"><Search size={23} /></span><h3>A carregar os anúncios</h3><p>Estamos a procurar as novidades da comunidade VilaShop.</p></div>
         ) : listingsLoadError ? (
