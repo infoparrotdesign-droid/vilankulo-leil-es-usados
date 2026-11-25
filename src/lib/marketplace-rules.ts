@@ -93,7 +93,7 @@ export function calculateSuggestedListingPrice(
 
 /** Normalizes Portuguese marketplace text for forgiving, accent-insensitive search. */
 export function normalizeMarketplaceSearch(value: string): string {
-  return value.normalize("NFD").replace(/\\p{M}/gu, "").toLocaleLowerCase("pt-MZ").trim().replace(/\\s+/g, " ");
+  return value.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase("pt-MZ").trim().replace(/\s+/g, " ");
 }
 
 /** Every search term must match, regardless of order or diacritics. */
