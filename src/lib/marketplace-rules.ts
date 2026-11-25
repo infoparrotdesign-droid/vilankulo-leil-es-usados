@@ -5,7 +5,7 @@ export function getAdultCutoff(today = new Date()): string {
   return cutoff.toISOString().slice(0, 10);
 }
 
-function isValidCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;
 
   const [year, month, day] = value.split("-").map(Number);
