@@ -5,8 +5,11 @@ on:
     branches:
       - vilashop/rebuild-foundation
       - vilashop/phase-1-contact-safety
+      - vilashop/gmail-message-moderation
     paths:
       - "src/**"
+      - "supabase/**"
+      - "docs/**"
       - ".env"
       - ".env.example"
       - "package.json"
@@ -19,6 +22,7 @@ on:
     branches:
       - main
       - vilashop/rebuild-foundation
+      - vilashop/phase-1-contact-safety
 
 permissions:
   contents: read
@@ -48,8 +52,8 @@ jobs:
         run: bun run lint
         continue-on-error: true
 
-      - name: Strict lint for Phase 1 safety changes
-        run: bunx eslint src/lib/message-safety.ts src/lib/message-safety.test.ts
+      - name: Strict lint for VilaShop safety and moderation helpers
+        run: bunx eslint src/lib/message-safety.ts src/lib/message-safety.test.ts src/lib/message-moderation.ts src/lib/message-moderation.test.ts
 
       - name: Run tests
         run: bun run test
