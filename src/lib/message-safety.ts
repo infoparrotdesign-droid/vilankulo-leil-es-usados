@@ -1,5 +1,5 @@
 export const CONTACT_SHARING_ERROR =
-  "Por segurança, não partilhe telefones, emails, links ou contactos de redes sociais. Mantenha a negociação no VilaShop.";
+  "Por segurança, não partilhe telefones, emails, links ou contactos de redes sociais. Mantenha a comunicação no VilaShop.";
 
 const EMAIL_PATTERN = /\b[\w.+-]+@[\w.-]+\.[A-Z]{2,}\b/i;
 const URL_PATTERN = /(?:https?:\/\/|www\.)\S+|\b[a-z0-9-]+\.(?:com|net|org|mz|co|app|io|me|info|biz|site|online|store|link)(?:\/\S*)?/i;
