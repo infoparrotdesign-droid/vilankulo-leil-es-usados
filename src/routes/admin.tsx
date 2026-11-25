@@ -445,6 +445,7 @@ function AdminPage() {
                   <span>Utilizador que sinalizou: {flag.flagged_by.slice(0, 8)}</span>
                   <span>Notificação Gmail: {({
                     pending: "Pendente",
+                    sending: "A enviar",
                     sent: "Enviada",
                     failed: "Falhou",
                   } as Record<string, string>)[flag.email_status] ?? "Desconhecido"}</span>
