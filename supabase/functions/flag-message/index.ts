@@ -79,10 +79,11 @@ Deno.serve(async (request: Request) => {
     const { data: userData, error: authError } = await admin.auth.getUser(jwt);
     if (authError || !userData.user) return json({ error: "Invalid session" }, 401);
 
-    // A successful prior flag is idempotent: do not count or email it again.
+    // Reuse an existing flag and claim its email delivery atomically.
+    // Only one concurrent request can move pending/failed to sending.
     const { data: priorFlag, error: priorFlagError } = await admin
       .from("message_moderation_flags")
-      .select("id, email_status")
+      .select("id, email_status, created_at")
       .eq("message_id", messageId)
       .eq("category", category)
       .eq("flagged_by", userData.user.id)
@@ -91,47 +92,85 @@ Deno.serve(async (request: Request) => {
     if (priorFlag?.email_status === "sent") {
       return json({ ok: true, flagId: priorFlag.id, duplicate: true, notificationSent: true });
     }
-
-    const windowStart = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const { count, error: countError } = await admin
-      .from("message_moderation_flags")
-      .select("id", { count: "exact", head: true })
-      .eq("flagged_by", userData.user.id)
-      .gte("created_at", windowStart);
-    if (countError) throw countError;
-    if ((count ?? 0) >= 15) return json({ error: "Limite de sinalizações atingido. Tente novamente mais tarde." }, 429);
-
-    const { data: flag, error: insertError } = await admin
-      .from("message_moderation_flags")
-      .insert({
-        message_id: messageId,
-        conversation_id: conversationId || null,
-        flagged_by: userData.user.id,
-        category,
-        message_content: messageContent,
-        details: details || null,
-      })
-      .select("id, created_at")
-      .single();
-
-    let storedFlag = flag;
-    if (insertError?.code === "23505") {
-      const { data: existing, error: existingError } = await admin
-        .from("message_moderation_flags")
-        .select("id, created_at, email_status")
-        .eq("message_id", messageId)
-        .eq("category", category)
-        .eq("flagged_by", userData.user.id)
-        .single();
-      if (existingError || !existing) throw existingError ?? new Error("Could not reload existing moderation flag");
-      if (existing.email_status === "sent") {
-        return json({ ok: true, flagId: existing.id, duplicate: true, notificationSent: true });
-      }
-      storedFlag = { id: existing.id, created_at: existing.created_at };
-    } else if (insertError || !flag) {
-      throw insertError ?? new Error("Could not store moderation flag");
+    if (priorFlag?.email_status === "sending") {
+      return json({ ok: true, flagId: priorFlag.id, duplicate: true, notificationSent: false }, 202);
     }
 
+    let storedFlag: { id: string; created_at: string };
+    if (priorFlag) {
+      storedFlag = { id: priorFlag.id, created_at: priorFlag.created_at };
+    } else {
+      const windowStart = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const { count, error: countError } = await admin
+        .from("message_moderation_flags")
+        .select("id", { count: "exact", head: true })
+        .eq("flagged_by", userData.user.id)
+        .gte("created_at", windowStart);
+      if (countError) throw countError;
+      if ((count ?? 0) >= 15) {
+        return json({ error: "Limite de sinalizações atingido. Tente novamente mais tarde." }, 429);
+      }
+
+      const { data: flag, error: insertError } = await admin
+        .from("message_moderation_flags")
+        .insert({
+          message_id: messageId,
+          conversation_id: conversationId || null,
+          flagged_by: userData.user.id,
+          category,
+          message_content: messageContent,
+          details: details || null,
+        })
+        .select("id, created_at")
+        .single();
+
+      if (insertError?.code === "23505") {
+        const { data: existing, error: existingError } = await admin
+          .from("message_moderation_flags")
+          .select("id, created_at, email_status")
+          .eq("message_id", messageId)
+          .eq("category", category)
+          .eq("flagged_by", userData.user.id)
+          .single();
+        if (existingError || !existing) {
+          throw existingError ?? new Error("Could not reload existing moderation flag");
+        }
+        if (existing.email_status === "sent") {
+          return json({ ok: true, flagId: existing.id, duplicate: true, notificationSent: true });
+        }
+        if (existing.email_status === "sending") {
+          return json({ ok: true, flagId: existing.id, duplicate: true, notificationSent: false }, 202);
+        }
+        storedFlag = { id: existing.id, created_at: existing.created_at };
+      } else if (insertError || !flag) {
+        throw insertError ?? new Error("Could not store moderation flag");
+      } else {
+        storedFlag = flag;
+      }
+    }
+
+    const { data: claimedFlag, error: claimError } = await admin
+      .from("message_moderation_flags")
+      .update({ email_status: "sending", email_error: null })
+      .eq("id", storedFlag.id)
+      .in("email_status", ["pending", "failed"])
+      .select("id")
+      .maybeSingle();
+    if (claimError) throw claimError;
+    if (!claimedFlag) {
+      const { data: latestFlag, error: latestError } = await admin
+        .from("message_moderation_flags")
+        .select("email_status")
+        .eq("id", storedFlag.id)
+        .single();
+      if (latestError) throw latestError;
+      return json({
+        ok: true,
+        flagId: storedFlag.id,
+        duplicate: true,
+        notificationSent: latestFlag.email_status === "sent",
+      }, 202);
+    }
     const mailerToken = Deno.env.get("VILASHOP_MAILER_TOKEN");
     if (!mailerToken) {
       await admin.from("message_moderation_flags").update({
