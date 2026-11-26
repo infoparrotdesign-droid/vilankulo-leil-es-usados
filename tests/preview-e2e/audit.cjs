@@ -26,7 +26,7 @@ const openSelector = "button.market-card-open";
 
     // Isolate the UI from production data: read-only Supabase queries return an empty
     // dataset so the app can display its own sample listings; no live rows are read.
-    if (request.method() === "GET" && /\\/rest\\/v1\\//.test(url)) {
+    if (request.method() === "GET" && url.includes("/rest/v1/")) {
       return route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -34,7 +34,7 @@ const openSelector = "button.market-card-open";
         body: "[]",
       });
     }
-    if (request.method() === "GET" && /\\/auth\\/v1\\/user(?:\\?|$)/.test(url)) {
+    if (request.method() === "GET" && url.includes("/auth/v1/user")) {
       return route.fulfill({
         status: 401,
         contentType: "application/json",
