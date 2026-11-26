@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bell, Check, Heart, MessageCircle, RefreshCw, Store, Tag, Truck, Wallet } from "lucide-react";
+import {
+  Bell,
+  Check,
+  Heart,
+  MessageCircle,
+  RefreshCw,
+  Store,
+  Tag,
+  Truck,
+  Wallet,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -301,7 +311,9 @@ function AccountPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline">
-              <Link to="/mensagens"><MessageCircle className="mr-2 size-4" /> Mensagens</Link>
+              <Link to="/mensagens">
+                <MessageCircle className="mr-2 size-4" /> Mensagens
+              </Link>
             </Button>
             <Button type="button" variant="outline" onClick={() => void load()}>
               <RefreshCw className="mr-2 size-4" /> Actualizar
