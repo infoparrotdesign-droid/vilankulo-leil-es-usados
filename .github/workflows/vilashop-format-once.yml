@@ -1,0 +1,55 @@
+name: VilaShop - One-time formatting repair
+
+on:
+  push:
+    branches:
+      - vilashop/rebuild-foundation
+    paths:
+      - ".github/workflows/vilashop-format-once.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vilashop-format-once
+  cancel-in-progress: false
+
+jobs:
+  format:
+    name: Apply Prettier formatting to tracked TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the working branch
+        uses: actions/checkout@v5
+        with:
+          ref: vilashop/rebuild-foundation
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Format tracked TypeScript files
+        shell: bash
+        run: |
+          mapfile -t files < <(git ls-files '*.ts' '*.tsx')
+          if [ "${#files[@]}" -gt 0 ]; then
+            bunx prettier --write "${files[@]}"
+          fi
+
+      - name: Commit formatting changes
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No formatting changes were required."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- '*.ts' '*.tsx'
+          git commit -m "Apply Prettier formatting across VilaShop TypeScript"
+          git push origin HEAD:vilashop/rebuild-foundation
