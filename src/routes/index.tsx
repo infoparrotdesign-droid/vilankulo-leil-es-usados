@@ -1838,7 +1838,8 @@ function Marketplace() {
                     />
                   </FormField>
                   <p>
-                    O seu lance deve superar {formatPrice(currentBid)}. O valor do lance é o preço de compra.
+                    O seu lance deve superar {formatPrice(currentBid)}. O valor do lance é o preço
+                    de compra.
                   </p>
                   <Button type="submit" disabled={busy} className="market-form-submit">
                     <Gavel size={16} />

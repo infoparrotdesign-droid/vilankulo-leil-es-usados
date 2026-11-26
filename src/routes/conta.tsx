@@ -78,12 +78,17 @@ function AccountPage() {
   const [follows, setFollows] = useState<Follow[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
-  const [sellerFinancials, setSellerFinancials] = useState<Record<string, {
-    commission_rate: number;
-    commission_amount: number;
-    buyer_total_amount: number;
-    seller_net_amount: number;
-  }>>({});
+  const [sellerFinancials, setSellerFinancials] = useState<
+    Record<
+      string,
+      {
+        commission_rate: number;
+        commission_amount: number;
+        buyer_total_amount: number;
+        seller_net_amount: number;
+      }
+    >
+  >({});
   const [counterValues, setCounterValues] = useState<Record<string, string>>({});
   const [disputes, setDisputes] = useState<Record<string, { reason: string; evidence: string }>>(
     {},
@@ -104,38 +109,43 @@ function AccountPage() {
       return;
     }
 
-    const [noticeResult, favoriteResult, followResult, offerResult, saleResult, sellerFinanceResult] = await Promise.all(
-      [
-        db
-          .from("notifications")
-          .select("id,title,body,created_at,read_at")
-          .order("created_at", { ascending: false })
-          .limit(50),
-        db
-          .from("listing_favorites")
-          .select("id,listing_id,created_at,listings(title,price,status)")
-          .order("created_at", { ascending: false })
-          .limit(100),
-        db
-          .from("seller_follows")
-          .select("id,seller_id,created_at")
-          .order("created_at", { ascending: false })
-          .limit(100),
-        db
-          .from("listing_offers")
-          .select("id,listing_id,buyer_id,seller_id,amount,counter_amount,status,created_at")
-          .order("created_at", { ascending: false })
-          .limit(100),
-        db
-          .from("marketplace_sales")
-          .select(
-            "id,listing_id,buyer_id,seller_id,agreed_price,status,delivery_method,buyer_confirmation_deadline,created_at",
-          )
-          .order("created_at", { ascending: false })
-          .limit(100),
-        db.rpc("get_my_seller_sale_financials"),
-      ],
-    );
+    const [
+      noticeResult,
+      favoriteResult,
+      followResult,
+      offerResult,
+      saleResult,
+      sellerFinanceResult,
+    ] = await Promise.all([
+      db
+        .from("notifications")
+        .select("id,title,body,created_at,read_at")
+        .order("created_at", { ascending: false })
+        .limit(50),
+      db
+        .from("listing_favorites")
+        .select("id,listing_id,created_at,listings(title,price,status)")
+        .order("created_at", { ascending: false })
+        .limit(100),
+      db
+        .from("seller_follows")
+        .select("id,seller_id,created_at")
+        .order("created_at", { ascending: false })
+        .limit(100),
+      db
+        .from("listing_offers")
+        .select("id,listing_id,buyer_id,seller_id,amount,counter_amount,status,created_at")
+        .order("created_at", { ascending: false })
+        .limit(100),
+      db
+        .from("marketplace_sales")
+        .select(
+          "id,listing_id,buyer_id,seller_id,agreed_price,status,delivery_method,buyer_confirmation_deadline,created_at",
+        )
+        .order("created_at", { ascending: false })
+        .limit(100),
+      db.rpc("get_my_seller_sale_financials"),
+    ]);
 
     if (noticeResult.error)
       toast.error(
@@ -155,13 +165,15 @@ function AccountPage() {
     } else {
       setSellerFinancials(
         Object.fromEntries(
-          ((sellerFinanceResult.data ?? []) as Array<{
-            sale_id: string;
-            commission_rate: number;
-            commission_amount: number;
-            buyer_total_amount: number;
-            seller_net_amount: number;
-          }>).map(({ sale_id, ...financial }) => [sale_id, financial]),
+          (
+            (sellerFinanceResult.data ?? []) as Array<{
+              sale_id: string;
+              commission_rate: number;
+              commission_amount: number;
+              buyer_total_amount: number;
+              seller_net_amount: number;
+            }>
+          ).map(({ sale_id, ...financial }) => [sale_id, financial]),
         ),
       );
     }
@@ -525,12 +537,18 @@ function AccountPage() {
                   {sale.seller_id === userId && sellerFinancials[sale.id] && (
                     <>
                       <p>
-                        Comissão VilaShop ({(sellerFinancials[sale.id].commission_rate * 100).toLocaleString("pt-MZ")}%):{" "}
-                        <strong>{sellerFinancials[sale.id].commission_amount.toLocaleString("pt-MZ")} MT</strong>
+                        Comissão VilaShop (
+                        {(sellerFinancials[sale.id].commission_rate * 100).toLocaleString("pt-MZ")}
+                        %):{" "}
+                        <strong>
+                          {sellerFinancials[sale.id].commission_amount.toLocaleString("pt-MZ")} MT
+                        </strong>
                       </p>
                       <p>
                         Valor líquido a receber:{" "}
-                        <strong>{sellerFinancials[sale.id].seller_net_amount.toLocaleString("pt-MZ")} MT</strong>
+                        <strong>
+                          {sellerFinancials[sale.id].seller_net_amount.toLocaleString("pt-MZ")} MT
+                        </strong>
                       </p>
                     </>
                   )}
