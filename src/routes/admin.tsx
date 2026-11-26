@@ -36,6 +36,7 @@ type AdminMessageFlag = {
 };
 
 type AdminDatabase = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase query builder is dynamic across admin-only relations.
   from: (table: string) => any;
   rpc: (functionName: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
 };
@@ -64,8 +65,11 @@ function AdminPage() {
   const [busy, setBusy] = useState(false);
   const [listings, setListings] = useState<AdminListing[]>([]);
   const [reasons, setReasons] = useState<Record<string, string>>({});
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- relation rows are selected dynamically by the admin queue.
   const [reports, setReports] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- relation rows are selected dynamically by the admin queue.
   const [sales, setSales] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- relation rows are selected dynamically by the admin queue.
   const [disputes, setDisputes] = useState<any[]>([]);
   const [messageFlags, setMessageFlags] = useState<AdminMessageFlag[]>([]);
   const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
