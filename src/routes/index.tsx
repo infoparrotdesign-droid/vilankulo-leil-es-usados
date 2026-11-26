@@ -749,7 +749,11 @@ function Marketplace() {
     }
     if (listing.isSample) {
       setIsFavorite((value) => !value);
-      toast.success(isFavorite ? "Artigo de demonstração removido dos favoritos deste ecrã." : "Artigo de demonstração guardado neste ecrã.");
+      toast.success(
+        isFavorite
+          ? "Artigo de demonstração removido dos favoritos deste ecrã."
+          : "Artigo de demonstração guardado neste ecrã.",
+      );
       return;
     }
     setBusy(true);
@@ -780,7 +784,11 @@ function Marketplace() {
     }
     if (listing.isSample) {
       setIsFollowingSeller((value) => !value);
-      toast.success(isFollowingSeller ? "Deixou de seguir o vendedor de demonstração neste ecrã." : "Está a seguir o vendedor de demonstração neste ecrã.");
+      toast.success(
+        isFollowingSeller
+          ? "Deixou de seguir o vendedor de demonstração neste ecrã."
+          : "Está a seguir o vendedor de demonstração neste ecrã.",
+      );
       return;
     }
     if (listing.seller_id === sessionUser.id) {
@@ -824,7 +832,9 @@ function Marketplace() {
       return;
     }
     if (listing.isSample) {
-      toast.success(`Proposta de demonstração de ${formatPrice(amount.data)} validada neste ecrã. Não foi enviada a um vendedor real.`);
+      toast.success(
+        `Proposta de demonstração de ${formatPrice(amount.data)} validada neste ecrã. Não foi enviada a um vendedor real.`,
+      );
       return;
     }
     const message = String(data.get("offerMessage") ?? "").trim();
@@ -897,7 +907,9 @@ function Marketplace() {
       return;
     }
     if (listing.isSample) {
-      toast.success("Demonstração: os números oficiais do VilaShop estão apresentados acima. Nenhuma compra ou pagamento real foi criado.");
+      toast.success(
+        "Demonstração: os números oficiais do VilaShop estão apresentados acima. Nenhuma compra ou pagamento real foi criado.",
+      );
       return;
     }
     if (listing.listing_type === "auction" && listing.status !== "ended") {
@@ -1809,9 +1821,15 @@ function Marketplace() {
               </div>
               <div className="rounded-xl border bg-muted/40 p-3 text-sm">
                 <p className="font-semibold">Meios oficiais para pagar ao VilaShop</p>
-                <p className="mt-1">Titular: <strong>JUNIOR PAULO FERNANDO HUATE</strong></p>
-                <p>e-Mola: <strong>875 492 563</strong></p>
-                <p>M-Pesa: <strong>850 492 563</strong></p>
+                <p className="mt-1">
+                  Titular: <strong>JUNIOR PAULO FERNANDO HUATE</strong>
+                </p>
+                <p>
+                  e-Mola: <strong>875 492 563</strong>
+                </p>
+                <p>
+                  M-Pesa: <strong>850 492 563</strong>
+                </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Estes são os números de recebimento do VilaShop. Os dados privados do vendedor
                   nunca são apresentados ao comprador.
