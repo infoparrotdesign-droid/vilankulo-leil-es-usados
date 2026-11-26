@@ -919,22 +919,33 @@ function Marketplace() {
     }
   }
 
-  async function showSellerContact(listing: Listing) {
+  async function startSellerConversation(listing: Listing) {
     if (!sessionUser || !profileReady) {
       setSelectedListing(null);
       setShowLogin(true);
-      toast.info("Entre na sua conta para contactar o vendedor.");
+      toast.info("Entre na sua conta para iniciar uma conversa.");
       return;
     }
-    if (listing.isSample) {
+    if (listing.isSample || !listing.seller_id) {
       toast.info(
-        "Este artigo serve apenas de exemplo. Os contactos aparecem nos anúncios publicados.",
+        "Este anúncio é apenas um exemplo. As conversas ficam disponíveis nos anúncios reais.",
       );
       return;
     }
-    const { data, error } = await supabase.rpc("get_seller_contact", { _listing_id: listing.id });
-    if (error || !data?.[0]?.phone) toast.error("O contacto não está disponível para este artigo.");
-    else window.location.href = `tel:${encodeURIComponent(data[0].phone)}`;
+    if (listing.seller_id === sessionUser.id) {
+      toast.info("Este é o seu próprio anúncio.");
+      return;
+    }
+    setBusy(true);
+    const { data, error } = await communityDb.rpc("start_listing_conversation", {
+      _listing_id: listing.id,
+    });
+    setBusy(false);
+    if (error || typeof data !== "string") {
+      toast.error(error?.message ?? "Não foi possível iniciar a conversa. Tente novamente.");
+      return;
+    }
+    window.location.href = `/mensagens?conversation=${encodeURIComponent(data)}`;
   }
 
   async function submitBid(event: FormEvent<HTMLFormElement>, listing: Listing) {
@@ -1910,9 +1921,9 @@ function Marketplace() {
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={() => void showSellerContact(selectedListing)}
+                    onClick={() => void startSellerConversation(selectedListing)}
                   >
-                    Contactar o vendedor
+                    Iniciar conversa
                   </Button>
                 </div>
               ) : (
@@ -1939,9 +1950,9 @@ function Marketplace() {
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={() => void showSellerContact(selectedListing)}
+                    onClick={() => void startSellerConversation(selectedListing)}
                   >
-                    Contactar o vendedor
+                    Iniciar conversa
                   </Button>
                 </div>
               )}
