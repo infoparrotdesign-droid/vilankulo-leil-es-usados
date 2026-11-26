@@ -1,0 +1,38 @@
+name: VilaShop - One-time format financial privacy changes
+on:
+  push:
+    branches:
+      - vilashop/rebuild-foundation
+    paths:
+      - "src/routes/conta.tsx"
+      - "src/routes/index.tsx"
+      - "src/routes/admin.tsx"
+permissions:
+  contents: write
+concurrency:
+  group: vilashop-one-time-format
+  cancel-in-progress: false
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: vilashop/rebuild-foundation
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bunx prettier --write src/routes/conta.tsx src/routes/index.tsx src/routes/admin.tsx
+      - name: Commit formatting and remove one-time workflow
+        shell: bash
+        run: |
+          rm .github/workflows/vilashop-format-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/routes/conta.tsx src/routes/index.tsx src/routes/admin.tsx .github/workflows/vilashop-format-once.yml
+          if git diff --cached --quiet; then
+            echo "No formatting changes required."
+          else
+            git commit -m "Format VilaShop seller commission privacy changes"
+            git push origin HEAD:vilashop/rebuild-foundation
+          fi
