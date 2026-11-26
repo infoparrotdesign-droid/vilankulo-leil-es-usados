@@ -1789,6 +1789,17 @@ function Marketplace() {
                   Total a pagar: {formatPrice(selectedListing.highest_bid ?? selectedListing.price)}
                 </p>
               </div>
+              <div className="rounded-xl border bg-muted/40 p-3 text-sm">
+                <p className="font-semibold">Meios oficiais para pagar ao VilaShop</p>
+                <p className="mt-1">Titular: <strong>JUNIOR PAULO FERNANDO HUATE</strong></p>
+                <p>e-Mola: <strong>875 492 563</strong></p>
+                <p>M-Pesa: <strong>850 492 563</strong></p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Estes são os números de recebimento do VilaShop. Os dados privados do vendedor
+                  nunca são apresentados ao comprador.
+                  {selectedListing.isSample ? " Este anúncio é demonstrativo; não efectue pagamentos por ele." : ""}
+                </p>
+              </div>
               <div className="market-condition-row">
                 <span>Estado</span>
                 <strong>{selectedListing.item_condition}</strong>
