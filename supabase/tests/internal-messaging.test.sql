@@ -20,7 +20,7 @@ begin
     raise exception 'Authenticated users must not read messages directly';
   end if;
   begin
-    perform public.send_conversation_message(conversation,'Contacte-me no 841234567');
+    perform public.send_conversation_message(conversation,'Contacte-me no 875492563');
     raise exception 'External phone number should have been rejected';
   exception when others then
     if sqlerrm = 'External phone number should have been rejected' then raise; end if;
