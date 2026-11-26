@@ -1811,7 +1811,9 @@ function Marketplace() {
                 <p className="mt-1 text-xs text-muted-foreground">
                   Estes são os números de recebimento do VilaShop. Os dados privados do vendedor
                   nunca são apresentados ao comprador.
-                  {selectedListing.isSample ? " Este anúncio é demonstrativo; não efectue pagamentos por ele." : ""}
+                  {selectedListing.isSample
+                    ? " Este anúncio é demonstrativo; não efectue pagamentos por ele."
+                    : ""}
                 </p>
               </div>
               <div className="market-condition-row">
