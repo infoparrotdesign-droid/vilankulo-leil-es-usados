@@ -60,13 +60,17 @@ import chairPhoto from "@/assets/wooden-chair.jpg";
 
 const APP_NAME = "VilaShop";
 const imageBucket = "boladas-media";
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- this adapter addresses dynamic marketplace relations before generated types are refreshed.
 const communityDb = supabase as unknown as {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic relation names are used until generated Supabase types are refreshed.
   from: (table: string) => any;
   rpc: (
     name: string,
     args?: Record<string, unknown>,
-  ) => Promise<{ data: any; error: { message: string } | null }>;
+  ) => Promise<{
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC payloads vary by the selected database function.
+    data: any;
+    error: { message: string } | null;
+  }>;
 };
 const listingCategories = [
   "Eletrónicos",
