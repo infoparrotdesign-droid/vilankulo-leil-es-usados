@@ -119,9 +119,9 @@ function AdminPage() {
       );
     setListings(listingResult.data ?? []);
     setReports(reportResult.data ?? []);
-    setSales(saleResult.data ?? []);
+    setSales((saleResult.data ?? []) as any[]);
     setDisputes(disputeResult.data ?? []);
-    setMessageFlags(messageFlagResult.data ?? []);
+    setMessageFlags((messageFlagResult.data ?? []) as any[]);
   }, []);
 
   const verifyAdmin = useCallback(async (): Promise<boolean> => {

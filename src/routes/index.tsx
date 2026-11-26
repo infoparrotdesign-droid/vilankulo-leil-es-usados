@@ -453,6 +453,7 @@ function Marketplace() {
     };
   }, [sellerId]);
 
+  const usesSamples = !listingsLoading && !listingsLoadError && liveListings.length === 0;
   const visibleListings = useMemo(() => {
     const items = liveListings.length > 0 ? liveListings : usesSamples ? sampleItems : [];
     return items
@@ -1005,7 +1006,6 @@ function Marketplace() {
     }
   }
 
-  const usesSamples = !listingsLoading && !listingsLoadError && liveListings.length === 0;
   const currentBid = selectedListing?.highest_bid ?? selectedListing?.price ?? 0;
   const hasActiveFilters =
     Boolean(query.trim()) || activeCategory !== "Todos" || activeType !== "all";

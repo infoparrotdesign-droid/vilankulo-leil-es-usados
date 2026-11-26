@@ -22,7 +22,8 @@ describe("VilaShop message moderation categories", () => {
 });
 
 describe("flagMessageForModeration input validation", () => {
-  const client = { functions: { invoke: vi.fn() } } as never;
+  const invoke = vi.fn();
+  const client = { functions: { invoke } } as unknown as Parameters<typeof flagMessageForModeration>[0];
   const validInput = {
     messageId: "message-1",
     category: "threat" as const,
@@ -33,7 +34,7 @@ describe("flagMessageForModeration input validation", () => {
     await expect(
       flagMessageForModeration(client, { ...validInput, messageId: " " }),
     ).rejects.toThrow("Referência de mensagem inválida.");
-    expect(client.functions.invoke).not.toHaveBeenCalled();
+    expect(invoke).not.toHaveBeenCalled();
   });
 
   it("rejects empty or oversized message content", async () => {
@@ -46,7 +47,7 @@ describe("flagMessageForModeration input validation", () => {
         messageContent: "x".repeat(5001),
       }),
     ).rejects.toThrow("O conteúdo da mensagem é inválido.");
-    expect(client.functions.invoke).not.toHaveBeenCalled();
+    expect(invoke).not.toHaveBeenCalled();
   });
 
   it("rejects oversized reporter notes", async () => {
@@ -56,7 +57,7 @@ describe("flagMessageForModeration input validation", () => {
         details: "x".repeat(1001),
       }),
     ).rejects.toThrow("A observação excede o limite permitido.");
-    expect(client.functions.invoke).not.toHaveBeenCalled();
+    expect(invoke).not.toHaveBeenCalled();
   });
 
   it("normalizes input and returns the delivery result", async () => {

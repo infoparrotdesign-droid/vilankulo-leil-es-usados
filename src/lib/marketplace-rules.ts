@@ -10,12 +10,12 @@ export function getAdultCutoff(today = new Date()): string {
 function isValidCalendarDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
 
-  const [year, month, day] = value.split("-").map(Number);
+  const [year = 0, month = 0, day = 0] = value.split("-").map(Number);
   if (year < 1 || month < 1 || month > 12 || day < 1) return false;
 
   const isLeapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
   const daysPerMonth = [31, isLeapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  return day <= daysPerMonth[month - 1];
+  return day <= (daysPerMonth[month - 1] ?? 0);
 }
 
 export function isAdultDateOfBirth(value: string, today = new Date()): boolean {
@@ -52,7 +52,7 @@ export function isSupportedListingImage(file: {
     return false;
   }
 
-  return SUPPORTED_IMAGE_MIME_TYPES[extension].includes(file.type.toLowerCase());
+  return (SUPPORTED_IMAGE_MIME_TYPES[extension] ?? []).includes(file.type.toLowerCase());
 }
 
 const DEFAULT_COMMISSION_RATE = 0.1;
@@ -174,7 +174,7 @@ export function hasValidListingImageSignature(
   bytes: Uint8Array,
 ): boolean {
   const extension = sanitizeImageName(filename);
-  if (!extension || !SUPPORTED_IMAGE_MIME_TYPES[extension].includes(mimeType.toLowerCase()))
+  if (!extension || !(SUPPORTED_IMAGE_MIME_TYPES[extension] ?? []).includes(mimeType.toLowerCase()))
     return false;
 
   if (extension === "jpg" || extension === "jpeg") {
