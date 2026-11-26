@@ -1,4 +1,8 @@
 -- Isolated PostgreSQL fixture: intentionally omits commission_rate from marketplace_sales.
+-- Supabase roles referenced by the migration are stubbed only in this disposable database.
+create role anon;
+create role authenticated;
+
 create table public.marketplace_sales (
   id uuid primary key,
   agreed_price numeric(12,2) not null
