@@ -47,9 +47,6 @@ type Sale = {
   buyer_id: string;
   seller_id: string;
   agreed_price: number;
-  commission_amount: number;
-  buyer_total_amount: number;
-  seller_net_amount: number;
   status: string;
   delivery_method: string;
   buyer_confirmation_deadline: string | null;
@@ -81,6 +78,12 @@ function AccountPage() {
   const [follows, setFollows] = useState<Follow[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
+  const [sellerFinancials, setSellerFinancials] = useState<Record<string, {
+    commission_rate: number;
+    commission_amount: number;
+    buyer_total_amount: number;
+    seller_net_amount: number;
+  }>>({});
   const [counterValues, setCounterValues] = useState<Record<string, string>>({});
   const [disputes, setDisputes] = useState<Record<string, { reason: string; evidence: string }>>(
     {},
@@ -101,7 +104,7 @@ function AccountPage() {
       return;
     }
 
-    const [noticeResult, favoriteResult, followResult, offerResult, saleResult] = await Promise.all(
+    const [noticeResult, favoriteResult, followResult, offerResult, saleResult, sellerFinanceResult] = await Promise.all(
       [
         db
           .from("notifications")
@@ -126,10 +129,11 @@ function AccountPage() {
         db
           .from("marketplace_sales")
           .select(
-            "id,listing_id,buyer_id,seller_id,agreed_price,commission_amount,buyer_total_amount,seller_net_amount,status,delivery_method,buyer_confirmation_deadline,created_at",
+            "id,listing_id,buyer_id,seller_id,agreed_price,status,delivery_method,buyer_confirmation_deadline,created_at",
           )
           .order("created_at", { ascending: false })
           .limit(100),
+        db.rpc("get_my_seller_sale_financials"),
       ],
     );
 
@@ -145,6 +149,22 @@ function AccountPage() {
     setFollows((followResult.data ?? []) as Follow[]);
     setOffers((offerResult.data ?? []) as Offer[]);
     setSales((saleResult.data ?? []) as Sale[]);
+    if (sellerFinanceResult.error) {
+      toast.error("Não foi possível carregar os detalhes financeiros das suas vendas.");
+      setSellerFinancials({});
+    } else {
+      setSellerFinancials(
+        Object.fromEntries(
+          ((sellerFinanceResult.data ?? []) as Array<{
+            sale_id: string;
+            commission_rate: number;
+            commission_amount: number;
+            buyer_total_amount: number;
+            seller_net_amount: number;
+          }>).map(({ sale_id, ...financial }) => [sale_id, financial]),
+        ),
+      );
+    }
     setLoading(false);
   }, []);
 
@@ -499,20 +519,21 @@ function AccountPage() {
                 </div>
                 <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
                   <p>
-                    Valor do artigo: <strong>{sale.agreed_price.toLocaleString("pt-MZ")} MT</strong>
+                    {sale.buyer_id === userId ? "Total a pagar" : "Valor da venda"}:{" "}
+                    <strong>{sale.agreed_price.toLocaleString("pt-MZ")} MT</strong>
                   </p>
-                  <p>
-                    Taxa VilaShop (10%, descontada ao vendedor):{" "}
-                    <strong>{sale.commission_amount.toLocaleString("pt-MZ")} MT</strong>
-                  </p>
-                  <p>
-                    Total pago pelo comprador:{" "}
-                    <strong>{sale.buyer_total_amount.toLocaleString("pt-MZ")} MT</strong>
-                  </p>
-                  <p>
-                    Vendedor recebe (90%):{" "}
-                    <strong>{sale.seller_net_amount.toLocaleString("pt-MZ")} MT</strong>
-                  </p>
+                  {sale.seller_id === userId && sellerFinancials[sale.id] && (
+                    <>
+                      <p>
+                        Comissão VilaShop ({(sellerFinancials[sale.id].commission_rate * 100).toLocaleString("pt-MZ")}%):{" "}
+                        <strong>{sellerFinancials[sale.id].commission_amount.toLocaleString("pt-MZ")} MT</strong>
+                      </p>
+                      <p>
+                        Valor líquido a receber:{" "}
+                        <strong>{sellerFinancials[sale.id].seller_net_amount.toLocaleString("pt-MZ")} MT</strong>
+                      </p>
+                    </>
+                  )}
                 </div>
                 {sale.status === "awaiting_payment" && sale.buyer_id === userId && (
                   <form
