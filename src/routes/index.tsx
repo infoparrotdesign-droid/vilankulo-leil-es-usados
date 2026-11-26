@@ -927,7 +927,9 @@ function Marketplace() {
       return;
     }
     if (listing.isSample || !listing.seller_id) {
-      toast.info("Este anúncio é apenas um exemplo. As conversas ficam disponíveis nos anúncios reais.");
+      toast.info(
+        "Este anúncio é apenas um exemplo. As conversas ficam disponíveis nos anúncios reais.",
+      );
       return;
     }
     if (listing.seller_id === sessionUser.id) {
