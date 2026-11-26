@@ -141,9 +141,7 @@ function MessagesPage() {
     await loadMessages(activeId);
   }
 
-  const activeConversation = conversations.find(
-    (item) => item.conversation_id === activeId,
-  );
+  const activeConversation = conversations.find((item) => item.conversation_id === activeId);
 
   if (loading) {
     return (
@@ -217,9 +215,7 @@ function MessagesPage() {
                   }
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="truncate font-semibold">
-                      {conversation.other_user_name}
-                    </span>
+                    <span className="truncate font-semibold">{conversation.other_user_name}</span>
                     {Number(conversation.unread_count) > 0 && (
                       <span className="rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
                         {conversation.unread_count}
@@ -230,8 +226,7 @@ function MessagesPage() {
                     {conversation.listing_title}
                   </p>
                   <p className="mt-2 truncate text-sm text-muted-foreground">
-                    {conversation.last_message ??
-                      "Conversa iniciada. Envie a primeira mensagem."}
+                    {conversation.last_message ?? "Conversa iniciada. Envie a primeira mensagem."}
                   </p>
                   <p className="mt-1 text-right text-[11px] text-muted-foreground">
                     {new Date(conversation.last_message_at).toLocaleString("pt-MZ")}
@@ -260,9 +255,7 @@ function MessagesPage() {
                   messages.map((message) => (
                     <div
                       key={message.id}
-                      className={
-                        "flex " + (message.is_mine ? "justify-end" : "justify-start")
-                      }
+                      className={"flex " + (message.is_mine ? "justify-end" : "justify-start")}
                     >
                       <div
                         className={
