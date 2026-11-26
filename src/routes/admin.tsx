@@ -103,7 +103,6 @@ function AdminPage() {
           .select("id,sale_id,opened_by,reason,evidence_note,status,created_at")
           .order("created_at", { ascending: true })
           .limit(50),
-        adminDatabase.rpc("admin_list_seller_payout_details"),
         adminDatabase
           .from("message_moderation_flags")
           .select(
@@ -111,6 +110,7 @@ function AdminPage() {
           )
           .order("created_at", { ascending: false })
           .limit(100),
+        adminDatabase.rpc("admin_list_seller_payout_details"),
       ]);
     if (listingResult.error) toast.error("Não foi possível carregar a fila de anúncios.");
     if (reportResult.error || saleResult.error || disputeResult.error)
