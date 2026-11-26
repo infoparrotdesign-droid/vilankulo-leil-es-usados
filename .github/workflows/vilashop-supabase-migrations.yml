@@ -87,7 +87,7 @@ jobs:
         run: supabase db push --dry-run --remote="$SUPABASE_PROJECT_ID"
 
       - name: Apply pending migrations only when explicitly requested
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.apply_migrations == true }}
+        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.apply_migrations == true) }}
         run: supabase db push --yes --remote="$SUPABASE_PROJECT_ID"
 
       - name: Verify remote migration history
