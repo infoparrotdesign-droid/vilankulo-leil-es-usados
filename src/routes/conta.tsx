@@ -155,7 +155,7 @@ function AccountPage() {
       db
         .from("marketplace_sales")
         .select(
-          "id,listing_id,buyer_id,seller_id,agreed_price,status,delivery_method,buyer_confirmation_deadline,created_at",
+          "id,listing_id,buyer_id,seller_id,agreed_price,status,delivery_method,buyer_confirmation_deadline,payment_method,created_at",
         )
         .order("created_at", { ascending: false })
         .limit(100),
@@ -608,7 +608,7 @@ function AccountPage() {
                     </div>
                     <div className="grid gap-1">
                       <Label htmlFor={`method-${sale.id}`}>Carteira utilizada</Label>
-                      <select id={`method-${sale.id}`} name="method" className="h-10 rounded-md border bg-background px-3 text-sm" defaultValue="e-Mola" required>
+                      <select id={`method-${sale.id}`} name="method" className="h-10 rounded-md border bg-background px-3 text-sm" defaultValue={sale.payment_method ?? "e-Mola"} required>
                         <option value="e-Mola">e-Mola</option>
                         <option value="M-Pesa">M-Pesa</option>
                       </select>
