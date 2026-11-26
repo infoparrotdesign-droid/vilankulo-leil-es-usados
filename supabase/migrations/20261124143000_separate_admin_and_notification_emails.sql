@@ -59,3 +59,14 @@ from auth.users
 where lower(email) = 'info.parrotdesign@gmail.com'
   and email_confirmed_at is not null
 on conflict (user_id) do nothing;
+
+-- Make the intentional absence of direct admin-table access explicit.
+-- Privileged checks are performed only inside SECURITY DEFINER functions.
+drop policy if exists vilashop_admins_no_direct_access on public.vilashop_admins;
+create policy vilashop_admins_no_direct_access
+  on public.vilashop_admins
+  as restrictive
+  for all
+  to authenticated
+  using (false)
+  with check (false);
