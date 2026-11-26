@@ -740,3 +740,151 @@ set public = false,
     file_size_limit = 5242880,
     allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp']
 where id = 'boladas-media';
+
+-- Keep seller commission data in a separate, non-readable table.
+-- Buyers can read sale progress and the agreed price, never the seller/platform split.
+create table if not exists public.marketplace_sale_financials (
+  sale_id uuid primary key references public.marketplace_sales(id) on delete restrict,
+  commission_rate numeric(5,4) not null check (commission_rate >= 0 and commission_rate < 1),
+  commission_amount numeric(12,2) not null check (commission_amount >= 0),
+  buyer_total_amount numeric(12,2) not null check (buyer_total_amount > 0),
+  seller_net_amount numeric(12,2) not null check (seller_net_amount >= 0),
+  created_at timestamptz not null default now()
+);
+alter table public.marketplace_sale_financials enable row level security;
+revoke all on public.marketplace_sale_financials from public, anon, authenticated;
+
+insert into public.marketplace_sale_financials
+  (sale_id, commission_rate, commission_amount, buyer_total_amount, seller_net_amount)
+select id, commission_rate, commission_amount, buyer_total_amount, seller_net_amount
+from public.marketplace_sales
+on conflict (sale_id) do nothing;
+
+create or replace function public.capture_marketplace_sale_financials()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  insert into public.marketplace_sale_financials
+    (sale_id, commission_rate, commission_amount, buyer_total_amount, seller_net_amount)
+  values (
+    new.id,
+    new.commission_rate,
+    round(new.agreed_price * new.commission_rate, 2),
+    new.agreed_price,
+    new.agreed_price - round(new.agreed_price * new.commission_rate, 2)
+  );
+  return new;
+end;
+$$;
+revoke all on function public.capture_marketplace_sale_financials() from public, anon, authenticated;
+drop trigger if exists marketplace_sales_capture_financials on public.marketplace_sales;
+create trigger marketplace_sales_capture_financials
+  after insert on public.marketplace_sales
+  for each row execute function public.capture_marketplace_sale_financials();
+
+create or replace function public.get_my_seller_sale_financials()
+returns table (
+  sale_id uuid,
+  commission_rate numeric,
+  commission_amount numeric,
+  buyer_total_amount numeric,
+  seller_net_amount numeric
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select f.sale_id, f.commission_rate, f.commission_amount, f.buyer_total_amount, f.seller_net_amount
+  from public.marketplace_sale_financials f
+  join public.marketplace_sales s on s.id = f.sale_id
+  where s.seller_id = (select auth.uid());
+$$;
+revoke all on function public.get_my_seller_sale_financials() from public, anon;
+grant execute on function public.get_my_seller_sale_financials() to authenticated;
+
+create or replace function public.admin_list_marketplace_sales()
+returns table (
+  id uuid,
+  listing_id uuid,
+  buyer_id uuid,
+  seller_id uuid,
+  agreed_price numeric,
+  commission_rate numeric,
+  commission_amount numeric,
+  buyer_total_amount numeric,
+  seller_net_amount numeric,
+  status text,
+  payment_reference text,
+  created_at timestamptz
+)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if (select auth.uid()) is null or not public.is_vilashop_admin() then
+    raise exception 'Apenas a administração pode consultar os valores de comissão.';
+  end if;
+  return query
+    select s.id, s.listing_id, s.buyer_id, s.seller_id, s.agreed_price,
+      f.commission_rate, f.commission_amount, f.buyer_total_amount, f.seller_net_amount,
+      s.status, s.payment_reference, s.created_at
+    from public.marketplace_sales s
+    join public.marketplace_sale_financials f on f.sale_id = s.id
+    order by s.created_at desc
+    limit 100;
+end;
+$$;
+revoke all on function public.admin_list_marketplace_sales() from public, anon;
+grant execute on function public.admin_list_marketplace_sales() to authenticated;
+
+create or replace function public.admin_record_seller_payout(_sale_id uuid,_payout_reference text)
+returns public.marketplace_sales
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  result_row public.marketplace_sales;
+  seller_net numeric(12,2);
+  uid uuid := auth.uid();
+begin
+  if uid is null or not public.is_vilashop_admin() then
+    raise exception 'Apenas a administração pode registar a liquidação.';
+  end if;
+  if nullif(btrim(_payout_reference),'') is null then
+    raise exception 'Registe a referência do pagamento ao vendedor.';
+  end if;
+  update public.marketplace_sales
+  set status='payout_recorded', payout_recorded_at=now(),
+      payout_reference=btrim(_payout_reference), updated_at=now()
+  where id=_sale_id and status='delivery_confirmed'
+    and not exists (
+      select 1 from public.sale_disputes d
+      where d.sale_id=_sale_id and d.status in ('open','under_review')
+    )
+  returning * into result_row;
+  if not found then
+    raise exception 'A liquidação está bloqueada ou a venda ainda não foi validada.';
+  end if;
+  select f.seller_net_amount into seller_net
+  from public.marketplace_sale_financials f where f.sale_id = _sale_id;
+  insert into public.notifications(recipient_id,actor_id,kind,title,body,entity_type,entity_id)
+  values (result_row.seller_id,uid,'sale_update','Pagamento ao vendedor registado',
+    'O VilaShop registou a liquidação de ' || seller_net::text || ' MZN.','sale',_sale_id);
+  return result_row;
+end;
+$$;
+revoke all on function public.admin_record_seller_payout(uuid,text) from public, anon;
+grant execute on function public.admin_record_seller_payout(uuid,text) to authenticated;
+
+alter table public.marketplace_sales
+  drop column commission_rate,
+  drop column commission_amount,
+  drop column buyer_total_amount,
+  drop column seller_net_amount;
