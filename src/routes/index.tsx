@@ -425,7 +425,7 @@ function Marketplace() {
     return () => {
       current = false;
     };
-  }, [selectedListing?.id, sessionUser?.id]);
+  }, [selectedListing, sessionUser]);
 
   const sellerId = sessionUser?.id;
   useEffect(() => {
