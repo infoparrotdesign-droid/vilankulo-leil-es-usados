@@ -1,0 +1,27 @@
+name: VilaShop source integrity
+
+on:
+  push:
+    branches:
+      - vilashop/rebuild-foundation
+      - vilashop/source-integrity-check
+  pull_request:
+    branches:
+      - vilashop/rebuild-foundation
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify all migration source files are present
+        run: node scripts/verify-vilashop-migration-files.mjs
