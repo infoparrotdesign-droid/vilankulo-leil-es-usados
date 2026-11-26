@@ -106,7 +106,6 @@ function AccountPage() {
   );
   const [payoutNumber, setPayoutNumber] = useState("");
   const [payoutHolder, setPayoutHolder] = useState("");
-  const [payoutDetailsLoading, setPayoutDetailsLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -174,7 +173,10 @@ function AccountPage() {
     setFavorites((favoriteResult.data ?? []) as Favorite[]);
     setFollows((followResult.data ?? []) as Follow[]);
     setOffers((offerResult.data ?? []) as Offer[]);
-    setSales((saleResult.data ?? []) as Sale[]);\n    const payoutDetails = (payoutDetailsResult.data ?? []) as Array<{ emola_number: string; account_holder: string }>;\n    setPayoutNumber(payoutDetails[0]?.emola_number ?? "");\n    setPayoutHolder(payoutDetails[0]?.account_holder ?? "");
+    setSales((saleResult.data ?? []) as Sale[]);
+    const payoutDetails = (payoutDetailsResult.data ?? []) as Array<{ emola_number: string; account_holder: string }>;
+    setPayoutNumber(payoutDetails[0]?.emola_number ?? "");
+    setPayoutHolder(payoutDetails[0]?.account_holder ?? "");
     if (sellerFinanceResult.error) {
       toast.error("Não foi possível carregar os detalhes financeiros das suas vendas.");
       setSellerFinancials({});
@@ -237,7 +239,14 @@ function AccountPage() {
     }
   }
 
-  async function savePayoutDetails(event: FormEvent<HTMLFormElement>) {\n    event.preventDefault();\n    const { error } = await db.rpc("save_my_seller_payout_details", { _emola_number: payoutNumber, _account_holder: payoutHolder });\n    if (error) toast.error(error.message);\n    else toast.success("Dados e-Mola guardados de forma privada para a administração.");\n  }\n\n  async function reportPayment(event: FormEvent<HTMLFormElement>, saleId: string) {
+  async function savePayoutDetails(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const { error } = await db.rpc("save_my_seller_payout_details", { _emola_number: payoutNumber, _account_holder: payoutHolder });
+    if (error) toast.error(error.message);
+    else toast.success("Dados e-Mola guardados de forma privada para a administração.");
+  }
+
+  async function reportPayment(event: FormEvent<HTMLFormElement>, saleId: string) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const method = String(form.get("method") ?? "").trim();
