@@ -52,9 +52,8 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Lint (existing repository baseline)
+      - name: Lint (strict)
         run: bun run lint
-        continue-on-error: true
 
       - name: Strict lint for VilaShop safety and moderation helpers
         run: bunx eslint src/lib/message-safety.ts src/lib/message-safety.test.ts src/lib/message-moderation.ts src/lib/message-moderation.test.ts
