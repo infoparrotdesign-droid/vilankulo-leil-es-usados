@@ -884,7 +884,7 @@ revoke all on function public.admin_record_seller_payout(uuid,text) from public,
 grant execute on function public.admin_record_seller_payout(uuid,text) to authenticated;
 
 alter table public.marketplace_sales
-  drop column commission_rate,
   drop column commission_amount,
   drop column buyer_total_amount,
-  drop column seller_net_amount;
+  drop column seller_net_amount,
+  drop column commission_rate;
