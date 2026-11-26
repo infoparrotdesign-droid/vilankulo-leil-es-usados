@@ -1768,18 +1768,9 @@ function Marketplace() {
                 <small>
                   <MapPin size={13} /> Vilankulo
                 </small>
-                <div className="mt-2 grid gap-1 text-sm">
-                  <p className="flex justify-between gap-3">
-                    <span>Taxa VilaShop (10%, descontada ao vendedor)</span>
-                    <span>
-                      {formatPrice((selectedListing.highest_bid ?? selectedListing.price) * 0.1)}
-                    </span>
-                  </p>
-                  <p className="flex justify-between gap-3 font-semibold">
-                    <span>Total a pagar pelo comprador</span>
-                    <span>{formatPrice(selectedListing.highest_bid ?? selectedListing.price)}</span>
-                  </p>
-                </div>
+                <p className="mt-2 text-sm font-semibold">
+                  Total a pagar: {formatPrice(selectedListing.highest_bid ?? selectedListing.price)}
+                </p>
               </div>
               <div className="market-condition-row">
                 <span>Estado</span>
@@ -1847,9 +1838,7 @@ function Marketplace() {
                     />
                   </FormField>
                   <p>
-                    O seu lance deve superar {formatPrice(currentBid)}. O valor do lance é o preço
-                    de compra. O comprador paga o lance vencedor; a taxa de serviço de 10% é
-                    descontada do valor a receber pelo vendedor.
+                    O seu lance deve superar {formatPrice(currentBid)}. O valor do lance é o preço de compra.
                   </p>
                   <Button type="submit" disabled={busy} className="market-form-submit">
                     <Gavel size={16} />
@@ -1903,9 +1892,7 @@ function Marketplace() {
                       />
                     </FormField>
                     <p className="text-xs text-muted-foreground">
-                      Se a proposta for aceite, o comprador paga o valor acordado. O VilaShop
-                      desconta 10% desse valor ao vendedor e apresenta antecipadamente quanto cada
-                      parte paga/recebe.
+                      Se a proposta for aceite, o comprador paga o valor acordado com o vendedor.
                     </p>
                     <FormField label="Mensagem ao vendedor (opcional)" htmlFor="offer-message">
                       <Input
