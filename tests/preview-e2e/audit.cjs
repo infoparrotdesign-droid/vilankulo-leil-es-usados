@@ -35,7 +35,7 @@ const reportPath = path.join(process.cwd(), "artifacts", "preview-e2e-report.md"
     record("Preview abre e responde", response && response.status() < 400 ? "APROVADO" : "FALHOU", `HTTP ${response?.status() ?? "sem resposta"}`);
 
     const bodyText = await page.locator("body").innerText().catch(() => "");
-    record("Página inicial apresenta conteúdo VilaShop", /VilaShop/i.test(bodyText) && bodyText.length > 100 ? "APROVADO" : "FALHOU", `Texto visível: ${bodyText.length} caracteres`);
+    record("Página inicial apresenta conteúdo VilaShop", /VilaShop/i.test(bodyText) && bodyText.length > 100 ? "APROVADO" : "FALHOU", `Texto visível: ${bodyText.length} caracteres. Início: ${bodyText.slice(0, 450).replace(/\\s+/g, " ")}`);
 
     const cards = page.locator("article.market-listing-card");
     const cardCount = await cards.count();
@@ -87,7 +87,7 @@ const reportPath = path.join(process.cwd(), "artifacts", "preview-e2e-report.md"
     }
 
     record("Nenhuma escrita real enviada", blockedMutations === 0 ? "APROVADO" : "APROVADO COM BLOQUEIOS", `${blockedMutations} pedidos mutáveis interceptados e bloqueados`);
-    record("Erros JavaScript da página", pageErrors.length === 0 ? "APROVADO" : "FALHOU", pageErrors.join(" | ") || "Nenhum erro pageerror");
+    await page.screenshot({ path: path.join(process.cwd(), "artifacts", "preview-home.png"), fullPage: true }).catch(() => {});\n    record("Erros JavaScript da página", pageErrors.length === 0 ? "APROVADO" : "FALHOU", pageErrors.join(" | ") || "Nenhum erro pageerror");
     record("Pedidos de rede falhados", failedRequests.length === 0 ? "INFO" : "AVISO", failedRequests.slice(0, 12).join(" | ") || "Nenhum");
   } catch (error) {
     record("Execução da auditoria", "FALHOU", error.stack || error.message);
