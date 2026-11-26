@@ -12,6 +12,7 @@ import { containsExternalContact, CONTACT_SHARING_ERROR } from "@/lib/message-sa
 type ApiError = { message: string };
 type ApiResult<T> = { data: T | null; error: ApiError | null };
 type DataApi = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- account queries target multiple relations added by migrations.
   from: (table: string) => any;
   rpc: (name: string, args?: Record<string, unknown>) => Promise<ApiResult<unknown>>;
 };
