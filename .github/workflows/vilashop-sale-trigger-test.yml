@@ -1,6 +1,13 @@
 name: VilaShop - Isolated sale financial trigger test
 
 on:
+  push:
+    branches:
+      - vilashop/fix-sale-financial-trigger
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/tests/**"
+      - ".github/workflows/vilashop-sale-trigger-test.yml"
   pull_request:
     branches:
       - vilashop/rebuild-foundation
