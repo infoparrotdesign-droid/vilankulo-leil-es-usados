@@ -26,6 +26,12 @@ jobs:
         with:
           ref: vilashop/rebuild-foundation
 
+      - name: Check out browser audit scripts
+        uses: actions/checkout@v5
+        with:
+          ref: vilashop/preview-e2e-audit
+          path: audit-tools
+
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -57,7 +63,7 @@ jobs:
         env:
           VILASHOP_PREVIEW_URL: http://127.0.0.1:4173
           NODE_PATH: /tmp/vilashop-playwright/node_modules
-        run: node tests/preview-e2e/audit.cjs
+        run: node audit-tools/tests/preview-e2e/audit.cjs
 
       - name: Upload browser audit report and screenshot
         if: always()
