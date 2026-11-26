@@ -87,7 +87,8 @@ const reportPath = path.join(process.cwd(), "artifacts", "preview-e2e-report.md"
     }
 
     record("Nenhuma escrita real enviada", blockedMutations === 0 ? "APROVADO" : "APROVADO COM BLOQUEIOS", `${blockedMutations} pedidos mutáveis interceptados e bloqueados`);
-    await page.screenshot({ path: path.join(process.cwd(), "artifacts", "preview-home.png"), fullPage: true }).catch(() => {});\n    record("Erros JavaScript da página", pageErrors.length === 0 ? "APROVADO" : "FALHOU", pageErrors.join(" | ") || "Nenhum erro pageerror");
+    await page.screenshot({ path: path.join(process.cwd(), "artifacts", "preview-home.png"), fullPage: true }).catch(() => {});
+    record("Erros JavaScript da página", pageErrors.length === 0 ? "APROVADO" : "FALHOU", pageErrors.join(" | ") || "Nenhum erro pageerror");
     record("Pedidos de rede falhados", failedRequests.length === 0 ? "INFO" : "AVISO", failedRequests.slice(0, 12).join(" | ") || "Nenhum");
   } catch (error) {
     record("Execução da auditoria", "FALHOU", error.stack || error.message);
