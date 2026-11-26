@@ -60,6 +60,7 @@ type Sale = {
   status: string;
   delivery_method: string;
   buyer_confirmation_deadline: string | null;
+  payment_method: "e-Mola" | "M-Pesa" | null;
   created_at: string;
 };
 
@@ -244,12 +245,17 @@ function AccountPage() {
 
   async function savePayoutDetails(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setBusy(true);
     const { error } = await db.rpc("save_my_seller_payout_details", {
       _emola_number: payoutNumber,
       _account_holder: payoutHolder,
     });
+    setBusy(false);
     if (error) toast.error(error.message);
-    else toast.success("Dados e-Mola guardados de forma privada para a administração.");
+    else {
+      toast.success("Dados e-Mola guardados de forma privada para a administração.");
+      await load();
+    }
   }
 
   async function reportPayment(event: FormEvent<HTMLFormElement>, saleId: string) {
@@ -465,10 +471,11 @@ function AccountPage() {
                     disabled={busy}
                     onClick={() =>
                       void callAction(
-                        "create_marketplace_sale",
+                        "create_marketplace_sale_with_payment",
                         {
                           _listing_id: item.listing_id,
                           _delivery_method: "in_person",
+                          _payment_method: "e-Mola",
                           _offer_id: item.id,
                         },
                         "Compra iniciada. Consulte a área de compras.",
@@ -600,6 +607,7 @@ function AccountPage() {
                       {sale.delivery_method === "in_person"
                         ? "Encontro presencial"
                         : "Entrega pelo vendedor"}
+                      {sale.payment_method ? ` · Pagamento por ${sale.payment_method}` : ""}
                     </p>
                   </div>
                   <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold">
