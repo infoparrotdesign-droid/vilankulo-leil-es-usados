@@ -1,3 +1,6 @@
+-- Direct seller phone disclosure is retired: all buyer/seller contact stays on-platform.
+drop function if exists public.get_seller_contact(uuid);
+
 -- Private, on-platform buyer/seller conversations. No phone or off-platform contact is exposed.
 create table if not exists public.marketplace_conversations (
   id uuid primary key default gen_random_uuid(),
