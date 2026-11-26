@@ -132,11 +132,16 @@ export function getComparableListingPrice(price: number, highestBid: number | nu
 }
 
 /** Replaces control characters while optionally preserving line and tab whitespace. */
-function replaceControlCharacters(value: string, replacement: string, preserveWhitespace = false): string {
+function replaceControlCharacters(
+  value: string,
+  replacement: string,
+  preserveWhitespace = false,
+): string {
   return Array.from(value, (character) => {
     const code = character.charCodeAt(0);
     const isControl = code <= 0x1f || code === 0x7f;
-    const isPreservedWhitespace = preserveWhitespace && (code === 0x09 || code === 0x0a || code === 0x0d);
+    const isPreservedWhitespace =
+      preserveWhitespace && (code === 0x09 || code === 0x0a || code === 0x0d);
     return isControl && !isPreservedWhitespace ? replacement : character;
   }).join("");
 }
