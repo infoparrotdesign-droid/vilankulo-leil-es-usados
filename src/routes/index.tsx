@@ -390,8 +390,12 @@ function Marketplace() {
     let current = true;
     setIsFavorite(false);
     setIsFollowingSeller(false);
+    if (!selectedListing) {
+      setPublicBidHistory([]);
+      return;
+    }
+    if (selectedListing.isSample) return;
     setPublicBidHistory([]);
-    if (!selectedListing || selectedListing.isSample) return;
     void (async () => {
       const historyRequest = communityDb.rpc("get_listing_bid_history", {
         _listing_id: selectedListing.id,
@@ -744,7 +748,12 @@ function Marketplace() {
       return;
     }
     if (listing.isSample) {
-      toast.info("Os artigos de exemplo não podem ser guardados.");
+      setIsFavorite((value) => !value);
+      toast.success(
+        isFavorite
+          ? "Artigo de demonstração removido dos favoritos deste ecrã."
+          : "Artigo de demonstração guardado neste ecrã.",
+      );
       return;
     }
     setBusy(true);
@@ -774,7 +783,12 @@ function Marketplace() {
       return;
     }
     if (listing.isSample) {
-      toast.info("Este vendedor de exemplo não pode ser seguido.");
+      setIsFollowingSeller((value) => !value);
+      toast.success(
+        isFollowingSeller
+          ? "Deixou de seguir o vendedor de demonstração neste ecrã."
+          : "Está a seguir o vendedor de demonstração neste ecrã.",
+      );
       return;
     }
     if (listing.seller_id === sessionUser.id) {
@@ -808,10 +822,6 @@ function Marketplace() {
       toast.info("Entre na sua conta para fazer uma proposta.");
       return;
     }
-    if (listing.isSample) {
-      toast.info("Este anúncio é apenas um exemplo.");
-      return;
-    }
     const data = new FormData(event.currentTarget);
     const amount = z.coerce
       .number()
@@ -819,6 +829,12 @@ function Marketplace() {
       .safeParse(data.get("offerAmount"));
     if (!amount.success) {
       toast.error("Indique um valor válido para a proposta.");
+      return;
+    }
+    if (listing.isSample) {
+      toast.success(
+        `Proposta de demonstração de ${formatPrice(amount.data)} validada neste ecrã. Não foi enviada a um vendedor real.`,
+      );
       return;
     }
     const message = String(data.get("offerMessage") ?? "").trim();
@@ -891,7 +907,9 @@ function Marketplace() {
       return;
     }
     if (listing.isSample) {
-      toast.info("Este anúncio é apenas um exemplo.");
+      toast.success(
+        "Demonstração: os números oficiais do VilaShop estão apresentados acima. Nenhuma compra ou pagamento real foi criado.",
+      );
       return;
     }
     if (listing.listing_type === "auction" && listing.status !== "ended") {
@@ -900,14 +918,20 @@ function Marketplace() {
     }
     const data = new FormData(event.currentTarget);
     const deliveryMethod = String(data.get("deliveryMethod"));
+    const paymentMethod = String(data.get("paymentMethod"));
     if (deliveryMethod !== "in_person" && deliveryMethod !== "seller_delivery") {
       toast.error("Escolha o método de entrega.");
       return;
     }
+    if (paymentMethod !== "e-Mola" && paymentMethod !== "M-Pesa") {
+      toast.error("Escolha e-Mola ou M-Pesa para pagar ao VilaShop.");
+      return;
+    }
     setBusy(true);
-    const { error } = await communityDb.rpc("create_marketplace_sale", {
+    const { error } = await communityDb.rpc("create_marketplace_sale_with_payment", {
       _listing_id: listing.id,
       _delivery_method: deliveryMethod,
+      _payment_method: paymentMethod,
       _offer_id: null,
     });
     setBusy(false);
@@ -956,7 +980,19 @@ function Marketplace() {
       return;
     }
     if (listing.isSample) {
-      toast.info("Este leilão serve apenas de exemplo.");
+      const amountInput = new FormData(event.currentTarget).get("amount");
+      const amount = z.coerce.number().refine(isValidMarketplaceAmount).safeParse(amountInput);
+      const currentBid = listing.highest_bid ?? listing.price;
+      if (!amount.success || amount.data <= currentBid) {
+        toast.error(`O lance de demonstração deve superar ${formatPrice(currentBid)}.`);
+        return;
+      }
+      setPublicBidHistory((items) => [
+        ...items,
+        { bid_number: items.length + 1, amount: amount.data, placed_at: new Date().toISOString() },
+      ]);
+      setSelectedListing({ ...listing, highest_bid: amount.data });
+      toast.success("Lance de demonstração registado neste ecrã. Não é uma oferta real.");
       return;
     }
     if (listing.status !== "active") {
@@ -1783,32 +1819,49 @@ function Marketplace() {
                   Total a pagar: {formatPrice(selectedListing.highest_bid ?? selectedListing.price)}
                 </p>
               </div>
+              <div className="rounded-xl border bg-muted/40 p-3 text-sm">
+                <p className="font-semibold">Meios oficiais para pagar ao VilaShop</p>
+                <p className="mt-1">
+                  Titular: <strong>JUNIOR PAULO FERNANDO HUATE</strong>
+                </p>
+                <p>
+                  e-Mola: <strong>875 492 563</strong>
+                </p>
+                <p>
+                  M-Pesa: <strong>850 492 563</strong>
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Estes são os números de recebimento do VilaShop. Os dados privados do vendedor
+                  nunca são apresentados ao comprador.
+                  {selectedListing.isSample
+                    ? " Este anúncio é demonstrativo; não efectue pagamentos por ele."
+                    : ""}
+                </p>
+              </div>
               <div className="market-condition-row">
                 <span>Estado</span>
                 <strong>{selectedListing.item_condition}</strong>
               </div>
-              {!selectedListing.isSample && (
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() => void toggleFavorite(selectedListing)}
-                  >
-                    <Heart className="mr-2 size-4" fill={isFavorite ? "currentColor" : "none"} />
-                    {isFavorite ? "Guardado" : "Guardar artigo"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={busy || selectedListing.seller_id === sessionUser?.id}
-                    onClick={() => void toggleSellerFollow(selectedListing)}
-                  >
-                    <UserRound className="mr-2 size-4" />
-                    {isFollowingSeller ? "A seguir vendedor" : "Seguir vendedor"}
-                  </Button>
-                </div>
-              )}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => void toggleFavorite(selectedListing)}
+                >
+                  <Heart className="mr-2 size-4" fill={isFavorite ? "currentColor" : "none"} />
+                  {isFavorite ? "Guardado" : "Guardar artigo"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy || selectedListing.seller_id === sessionUser?.id}
+                  onClick={() => void toggleSellerFollow(selectedListing)}
+                >
+                  <UserRound className="mr-2 size-4" />
+                  {isFollowingSeller ? "A seguir vendedor" : "Seguir vendedor"}
+                </Button>
+              </div>
               {selectedListing.listing_type === "auction" && publicBidHistory.length > 0 && (
                 <section className="rounded-xl border p-3">
                   <h3 className="font-semibold">Histórico de propostas</h3>
@@ -1881,6 +1934,20 @@ function Marketplace() {
                         <option value="seller_delivery">Entrega pelo vendedor</option>
                       </select>
                     </FormField>
+                    <FormField
+                      label="Como pretende pagar ao VilaShop?"
+                      htmlFor="auction-payment-method"
+                    >
+                      <select
+                        id="auction-payment-method"
+                        name="paymentMethod"
+                        className="market-form-select"
+                        defaultValue="e-Mola"
+                      >
+                        <option value="e-Mola">e-Mola · 875 492 563</option>
+                        <option value="M-Pesa">M-Pesa · 850 492 563</option>
+                      </select>
+                    </FormField>
                     <Button type="submit" className="market-form-submit" disabled={busy}>
                       <ShoppingBag size={16} /> Confirmar compra como vencedor
                     </Button>
@@ -1941,6 +2008,20 @@ function Marketplace() {
                       >
                         <option value="in_person">Encontro presencial</option>
                         <option value="seller_delivery">Entrega pelo vendedor</option>
+                      </select>
+                    </FormField>
+                    <FormField
+                      label="Como pretende pagar ao VilaShop?"
+                      htmlFor="sale-payment-method"
+                    >
+                      <select
+                        id="sale-payment-method"
+                        name="paymentMethod"
+                        className="market-form-select"
+                        defaultValue="e-Mola"
+                      >
+                        <option value="e-Mola">e-Mola · 875 492 563</option>
+                        <option value="M-Pesa">M-Pesa · 850 492 563</option>
                       </select>
                     </FormField>
                     <Button type="submit" className="market-form-submit" disabled={busy}>
