@@ -22,6 +22,25 @@ const openSelector = "button.market-card-open";
 
   await page.route("**/*", async route => {
     const request = route.request();
+    const url = request.url();
+
+    // Isolate the UI from production data: read-only Supabase queries return an empty
+    // dataset so the app can display its own sample listings; no live rows are read.
+    if (request.method() === "GET" && /\\/rest\\/v1\\//.test(url)) {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        headers: { "content-range": "0-0/0" },
+        body: "[]",
+      });
+    }
+    if (request.method() === "GET" && /\\/auth\\/v1\\/user(?:\\?|$)/.test(url)) {
+      return route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "No browser session in isolated audit", code: 401 }),
+      });
+    }
     if (!["GET", "HEAD", "OPTIONS"].includes(request.method())) {
       blockedMutations += 1;
       return route.abort("blockedbyclient");
