@@ -131,21 +131,24 @@ export function getComparableListingPrice(price: number, highestBid: number | nu
       : Number.POSITIVE_INFINITY;
 }
 
+/** Replaces control characters while optionally preserving line and tab whitespace. */
+function replaceControlCharacters(value: string, replacement: string, preserveWhitespace = false): string {
+  return Array.from(value, (character) => {
+    const code = character.charCodeAt(0);
+    const isControl = code <= 0x1f || code === 0x7f;
+    const isPreservedWhitespace = preserveWhitespace && (code === 0x09 || code === 0x0a || code === 0x0d);
+    return isControl && !isPreservedWhitespace ? replacement : character;
+  }).join("");
+}
+
 /** Keeps listing titles readable and consistent before persistence. */
 export function normalizeListingTitle(value: string): string {
-  return value
-    // eslint-disable-next-line no-control-regex -- intentionally strips control characters from user input.
-    .replace(/[\x00-\x1f\x7f]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  return replaceControlCharacters(value, " ").replace(/\s+/g, " ").trim();
 }
 
 /** Removes invisible control characters while preserving paragraph breaks. */
 export function normalizeListingDescription(value: string): string {
-  return value
-    .replace(/\r\n?/g, "\n")
-    // eslint-disable-next-line no-control-regex -- intentionally strips control characters from user input.
-    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "")
+  return replaceControlCharacters(value.replace(/\r\n?/g, "\n"), "", true)
     .split("\n")
     .map((line) => line.replace(/[\t ]+/g, " ").trim())
     .join("\n")
@@ -153,7 +156,6 @@ export function normalizeListingDescription(value: string): string {
     .trim();
 }
 
-/** Marketplace amounts are positive, finite and limited to two decimal places. */
 export function isValidMarketplaceAmount(value: number): boolean {
   return (
     Number.isFinite(value) && value > 0 && Math.abs(value * 100 - Math.round(value * 100)) < 1e-7
