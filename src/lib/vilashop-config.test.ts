@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { isVilaShopAdminEmail, VILASHOP_ADMIN_EMAIL, VILASHOP_NOTIFICATION_EMAIL } from "./vilashop-config";
+import {
+  isVilaShopAdminEmail,
+  VILASHOP_ADMIN_EMAIL,
+  VILASHOP_NOTIFICATION_EMAIL,
+} from "./vilashop-config";
 
 describe("VilaShop administrative identity", () => {
   it("reserves administrative identity for the Parrot mailbox", () => {

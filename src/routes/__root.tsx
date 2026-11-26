@@ -84,10 +84,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "VilaShop — Comunidade de compra e venda" },
-      { name: "description", content: "Descobre, conecta-te, compra e vende na comunidade VilaShop." },
+      {
+        name: "description",
+        content: "Descobre, conecta-te, compra e vende na comunidade VilaShop.",
+      },
       { name: "author", content: "VilaShop" },
       { property: "og:title", content: "VilaShop — Comunidade de compra e venda" },
-      { property: "og:description", content: "Descobre, conecta-te, compra e vende na comunidade VilaShop." },
+      {
+        property: "og:description",
+        content: "Descobre, conecta-te, compra e vende na comunidade VilaShop.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@VilaShop" },
@@ -134,9 +140,12 @@ function ThemeToggle() {
     } catch {
       // Private browsing or storage restrictions: fall back to the device preference.
     }
-    const initial = saved === "light" || saved === "dark"
-      ? saved
-      : window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    const initial =
+      saved === "light" || saved === "dark"
+        ? saved
+        : window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
     setTheme(initial);
     document.documentElement.classList.toggle("dark", initial === "dark");
   }, []);

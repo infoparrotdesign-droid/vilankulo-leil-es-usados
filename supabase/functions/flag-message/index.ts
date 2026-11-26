@@ -60,9 +60,11 @@ Deno.serve(async (request: Request) => {
   }
 
   const messageId = typeof payload.messageId === "string" ? payload.messageId.trim() : "";
-  const conversationId = typeof payload.conversationId === "string" ? payload.conversationId.trim() : null;
+  const conversationId =
+    typeof payload.conversationId === "string" ? payload.conversationId.trim() : null;
   const category = typeof payload.category === "string" ? payload.category : "";
-  const messageContent = typeof payload.messageContent === "string" ? payload.messageContent.trim() : "";
+  const messageContent =
+    typeof payload.messageContent === "string" ? payload.messageContent.trim() : "";
   const details = typeof payload.details === "string" ? payload.details.trim() : null;
 
   if (!messageId || messageId.length > 128 || (conversationId && conversationId.length > 128)) {
@@ -183,9 +185,7 @@ Deno.serve(async (request: Request) => {
     claimQuery = staleSendingAt
       ? claimQuery.eq("email_status", "sending").eq("email_started_at", staleSendingAt)
       : claimQuery.in("email_status", ["pending", "failed"]);
-    const { data: claimedFlag, error: claimError } = await claimQuery
-      .select("id")
-      .maybeSingle();
+    const { data: claimedFlag, error: claimError } = await claimQuery.select("id").maybeSingle();
     if (claimError) throw claimError;
     if (!claimedFlag) {
       const { data: latestFlag, error: latestError } = await admin
@@ -194,24 +194,31 @@ Deno.serve(async (request: Request) => {
         .eq("id", storedFlag.id)
         .single();
       if (latestError) throw latestError;
-      return json({
-        ok: true,
-        flagId: storedFlag.id,
-        duplicate: true,
-        notificationSent: latestFlag.email_status === "sent",
-      }, 202);
+      return json(
+        {
+          ok: true,
+          flagId: storedFlag.id,
+          duplicate: true,
+          notificationSent: latestFlag.email_status === "sent",
+        },
+        202,
+      );
     }
     const mailerToken = Deno.env.get("VILASHOP_MAILER_TOKEN");
     if (!mailerToken) {
-      const { error: statusError } = await admin.from("message_moderation_flags").update({
-        email_status: "failed",
-        email_error: "Mailer token is not configured",
-      }).eq("id", storedFlag.id);
+      const { error: statusError } = await admin
+        .from("message_moderation_flags")
+        .update({
+          email_status: "failed",
+          email_error: "Mailer token is not configured",
+        })
+        .eq("id", storedFlag.id);
       if (statusError) throw statusError;
       return json({ ok: true, flagId: storedFlag.id, notificationSent: false }, 202);
     }
 
-    const excerpt = messageContent.length > 700 ? messageContent.slice(0, 697) + "..." : messageContent;
+    const excerpt =
+      messageContent.length > 700 ? messageContent.slice(0, 697) + "..." : messageContent;
     const emailMessage = [
       "Uma mensagem foi sinalizada na plataforma VilaShop.",
       "",
@@ -225,7 +232,9 @@ Deno.serve(async (request: Request) => {
       details ? "\nObservação de quem sinalizou:\n" + details : "",
       "",
       "Aceda ao painel administrativo para analisar o caso.",
-    ].filter(Boolean).join("\n");
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     const mailResponse = await fetch(supabaseUrl + "/functions/v1/send-admin-notification", {
       method: "POST",
@@ -243,10 +252,13 @@ Deno.serve(async (request: Request) => {
     });
 
     if (!mailResponse.ok) {
-      const { error: statusError } = await admin.from("message_moderation_flags").update({
-        email_status: "failed",
-        email_error: "Mailer returned HTTP " + mailResponse.status,
-      }).eq("id", storedFlag.id);
+      const { error: statusError } = await admin
+        .from("message_moderation_flags")
+        .update({
+          email_status: "failed",
+          email_error: "Mailer returned HTTP " + mailResponse.status,
+        })
+        .eq("id", storedFlag.id);
       if (statusError) throw statusError;
       return json({ ok: true, flagId: storedFlag.id, notificationSent: false }, 202);
     }
@@ -257,7 +269,11 @@ Deno.serve(async (request: Request) => {
     } catch {
       throw new Error("Mailer returned an invalid success response");
     }
-    if (mailResult?.ok !== true || typeof mailResult.messageId !== "string" || !mailResult.messageId) {
+    if (
+      mailResult?.ok !== true ||
+      typeof mailResult.messageId !== "string" ||
+      !mailResult.messageId
+    ) {
       throw new Error("Mailer returned an incomplete success response");
     }
 
@@ -277,7 +293,10 @@ Deno.serve(async (request: Request) => {
 
     return json({ ok: true, flagId: storedFlag.id, notificationSent: true });
   } catch (error) {
-    console.error("Message moderation notification failed", error instanceof Error ? error.message : "Unknown error");
+    console.error(
+      "Message moderation notification failed",
+      error instanceof Error ? error.message : "Unknown error",
+    );
     return json({ error: "Could not register message flag" }, 500);
   }
 });

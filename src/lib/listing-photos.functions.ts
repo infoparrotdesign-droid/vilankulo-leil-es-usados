@@ -19,14 +19,20 @@ export const getActiveListingPhotoUrls = createServerFn({ method: "POST" })
     if (error) throw new Error("Não foi possível carregar as fotografias dos anúncios.");
 
     const photos = (listings ?? []).flatMap((listing) =>
-      listing.photo_path && (listing.status === "active" || (listing.status === "ended" && listing.listing_type === "auction")) ? [{ listingId: listing.id, path: listing.photo_path }] : [],
+      listing.photo_path &&
+      (listing.status === "active" ||
+        (listing.status === "ended" && listing.listing_type === "auction"))
+        ? [{ listingId: listing.id, path: listing.photo_path }]
+        : [],
     );
     if (photos.length === 0) return [];
 
-    const { data: signedPhotos, error: signingError } = await supabaseAdmin
-      .storage
+    const { data: signedPhotos, error: signingError } = await supabaseAdmin.storage
       .from("boladas-media")
-      .createSignedUrls(photos.map((photo) => photo.path), 3600);
+      .createSignedUrls(
+        photos.map((photo) => photo.path),
+        3600,
+      );
 
     if (signingError) throw new Error("Não foi possível carregar as fotografias dos anúncios.");
 

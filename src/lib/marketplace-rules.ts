@@ -1,7 +1,9 @@
 const ADULT_YEARS = 18;
 
 export function getAdultCutoff(today = new Date()): string {
-  const cutoff = new Date(Date.UTC(today.getUTCFullYear() - ADULT_YEARS, today.getUTCMonth(), today.getUTCDate()));
+  const cutoff = new Date(
+    Date.UTC(today.getUTCFullYear() - ADULT_YEARS, today.getUTCMonth(), today.getUTCDate()),
+  );
   return cutoff.toISOString().slice(0, 10);
 }
 
@@ -41,14 +43,17 @@ export function isSupportedListingImage(file: {
   size: number;
 }): boolean {
   const extension = sanitizeImageName(file.name);
-  if (!extension || !Number.isFinite(file.size) || file.size <= 0
-    || file.size > MAX_LISTING_IMAGE_SIZE_BYTES) {
+  if (
+    !extension ||
+    !Number.isFinite(file.size) ||
+    file.size <= 0 ||
+    file.size > MAX_LISTING_IMAGE_SIZE_BYTES
+  ) {
     return false;
   }
 
   return SUPPORTED_IMAGE_MIME_TYPES[extension].includes(file.type.toLowerCase());
 }
-
 
 const DEFAULT_COMMISSION_RATE = 0.1;
 
@@ -63,8 +68,13 @@ export function calculateSaleBreakdown(
   listingPrice: number,
   commissionRate = DEFAULT_COMMISSION_RATE,
 ): SaleBreakdown {
-  if (!Number.isFinite(listingPrice) || listingPrice <= 0
-    || !Number.isFinite(commissionRate) || commissionRate < 0 || commissionRate >= 1) {
+  if (
+    !Number.isFinite(listingPrice) ||
+    listingPrice <= 0 ||
+    !Number.isFinite(commissionRate) ||
+    commissionRate < 0 ||
+    commissionRate >= 1
+  ) {
     return { buyerTotal: 0, commission: 0, sellerNet: 0 };
   }
 
@@ -82,18 +92,27 @@ export function calculateSuggestedListingPrice(
   desiredSellerNet: number,
   commissionRate = DEFAULT_COMMISSION_RATE,
 ): number {
-  if (!Number.isFinite(desiredSellerNet) || desiredSellerNet <= 0
-    || !Number.isFinite(commissionRate) || commissionRate < 0 || commissionRate >= 1) {
+  if (
+    !Number.isFinite(desiredSellerNet) ||
+    desiredSellerNet <= 0 ||
+    !Number.isFinite(commissionRate) ||
+    commissionRate < 0 ||
+    commissionRate >= 1
+  ) {
     return 0;
   }
 
   return Math.ceil((desiredSellerNet / (1 - commissionRate)) * 100 - Number.EPSILON) / 100;
 }
 
-
 /** Normalizes Portuguese marketplace text for forgiving, accent-insensitive search. */
 export function normalizeMarketplaceSearch(value: string): string {
-  return value.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase("pt-MZ").trim().replace(/\s+/g, " ");
+  return value
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLocaleLowerCase("pt-MZ")
+    .trim()
+    .replace(/\s+/g, " ");
 }
 
 /** Every search term must match, regardless of order or diacritics. */
@@ -107,35 +126,41 @@ export function matchesMarketplaceSearch(text: string, query: string): boolean {
 export function getComparableListingPrice(price: number, highestBid: number | null): number {
   return highestBid !== null && Number.isFinite(highestBid) && highestBid > 0
     ? highestBid
-    : Number.isFinite(price) && price > 0 ? price : Number.POSITIVE_INFINITY;
+    : Number.isFinite(price) && price > 0
+      ? price
+      : Number.POSITIVE_INFINITY;
 }
-
 
 /** Keeps listing titles readable and consistent before persistence. */
 export function normalizeListingTitle(value: string): string {
   // eslint-disable-next-line no-control-regex -- intentionally strips control characters from user input.
-  return value.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+  return value
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /** Removes invisible control characters while preserving paragraph breaks. */
 export function normalizeListingDescription(value: string): string {
-  return value
-    .replace(/\r\n?/g, "\n")
-    // eslint-disable-next-line no-control-regex -- intentionally strips control characters from user input.
-    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "")
-    .split("\n")
-    .map((line) => line.replace(/[\t ]+/g, " ").trim())
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  return (
+    value
+      .replace(/\r\n?/g, "\n")
+      // eslint-disable-next-line no-control-regex -- intentionally strips control characters from user input.
+      .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "")
+      .split("\n")
+      .map((line) => line.replace(/[\t ]+/g, " ").trim())
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim()
+  );
 }
 
 /** Marketplace amounts are positive, finite and limited to two decimal places. */
 export function isValidMarketplaceAmount(value: number): boolean {
-  return Number.isFinite(value) && value > 0
-    && Math.abs(value * 100 - Math.round(value * 100)) < 1e-7;
+  return (
+    Number.isFinite(value) && value > 0 && Math.abs(value * 100 - Math.round(value * 100)) < 1e-7
+  );
 }
-
 
 /** Confirms the file's binary signature agrees with its supported extension and MIME type. */
 export function hasValidListingImageSignature(
@@ -144,7 +169,8 @@ export function hasValidListingImageSignature(
   bytes: Uint8Array,
 ): boolean {
   const extension = sanitizeImageName(filename);
-  if (!extension || !SUPPORTED_IMAGE_MIME_TYPES[extension].includes(mimeType.toLowerCase())) return false;
+  if (!extension || !SUPPORTED_IMAGE_MIME_TYPES[extension].includes(mimeType.toLowerCase()))
+    return false;
 
   if (extension === "jpg" || extension === "jpeg") {
     return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
@@ -152,10 +178,20 @@ export function hasValidListingImageSignature(
 
   if (extension === "png") {
     const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
-    return bytes.length >= signature.length && signature.every((value, index) => bytes[index] === value);
+    return (
+      bytes.length >= signature.length && signature.every((value, index) => bytes[index] === value)
+    );
   }
 
-  return bytes.length >= 12
-    && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46
-    && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50;
+  return (
+    bytes.length >= 12 &&
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  );
 }
