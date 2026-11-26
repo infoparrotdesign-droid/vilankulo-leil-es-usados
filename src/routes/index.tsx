@@ -1887,8 +1887,16 @@ function Marketplace() {
                         <option value="seller_delivery">Entrega pelo vendedor</option>
                       </select>
                     </FormField>
-                    <FormField label="Como pretende pagar ao VilaShop?" htmlFor="auction-payment-method">
-                      <select id="auction-payment-method" name="paymentMethod" className="market-form-select" defaultValue="e-Mola">
+                    <FormField
+                      label="Como pretende pagar ao VilaShop?"
+                      htmlFor="auction-payment-method"
+                    >
+                      <select
+                        id="auction-payment-method"
+                        name="paymentMethod"
+                        className="market-form-select"
+                        defaultValue="e-Mola"
+                      >
                         <option value="e-Mola">e-Mola · 875 492 563</option>
                         <option value="M-Pesa">M-Pesa · 850 492 563</option>
                       </select>
@@ -1955,8 +1963,16 @@ function Marketplace() {
                         <option value="seller_delivery">Entrega pelo vendedor</option>
                       </select>
                     </FormField>
-                    <FormField label="Como pretende pagar ao VilaShop?" htmlFor="sale-payment-method">
-                      <select id="sale-payment-method" name="paymentMethod" className="market-form-select" defaultValue="e-Mola">
+                    <FormField
+                      label="Como pretende pagar ao VilaShop?"
+                      htmlFor="sale-payment-method"
+                    >
+                      <select
+                        id="sale-payment-method"
+                        name="paymentMethod"
+                        className="market-form-select"
+                        defaultValue="e-Mola"
+                      >
                         <option value="e-Mola">e-Mola · 875 492 563</option>
                         <option value="M-Pesa">M-Pesa · 850 492 563</option>
                       </select>
