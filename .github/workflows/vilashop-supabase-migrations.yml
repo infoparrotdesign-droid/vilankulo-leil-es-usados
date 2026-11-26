@@ -189,7 +189,7 @@ jobs:
         run: |
           CLEANUP_TOKEN="$(openssl rand -hex 32)"
           echo "::add-mask::$CLEANUP_TOKEN"
-          printf '%s\\n' "CLEANUP_TOKEN=$CLEANUP_TOKEN" >> "$GITHUB_ENV"
+          printf '%s\n' "CLEANUP_TOKEN=$CLEANUP_TOKEN" >> "$GITHUB_ENV"
           supabase secrets set --yes --project-ref "$SUPABASE_PROJECT_ID" "VILASHOP_CLEANUP_TOKEN=$CLEANUP_TOKEN"
 
       - name: Run photo cleanup function
