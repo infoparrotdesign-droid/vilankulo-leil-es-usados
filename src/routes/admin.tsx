@@ -77,11 +77,12 @@ function AdminPage() {
   const [sales, setSales] = useState<any[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- relation rows are selected dynamically by the admin queue.
   const [disputes, setDisputes] = useState<any[]>([]);
-  const [messageFlags, setMessageFlags] = useState<AdminMessageFlag[]>([]);\n  const [sellerPayoutDetails, setSellerPayoutDetails] = useState<Array<{ seller_id: string; display_name: string | null; emola_number: string; account_holder: string }>>([]);
+  const [messageFlags, setMessageFlags] = useState<AdminMessageFlag[]>([]);
+  const [sellerPayoutDetails, setSellerPayoutDetails] = useState<Array<{ seller_id: string; display_name: string | null; emola_number: string; account_holder: string }>>([]);
   const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
 
   const loadQueue = useCallback(async () => {
-    const [listingResult, reportResult, saleResult, disputeResult, messageFlagResult] =
+    const [listingResult, reportResult, saleResult, disputeResult, messageFlagResult, payoutDetailsResult] =
       await Promise.all([
         adminDatabase
           .from("listings")
@@ -102,6 +103,7 @@ function AdminPage() {
           .select("id,sale_id,opened_by,reason,evidence_note,status,created_at")
           .order("created_at", { ascending: true })
           .limit(50),
+        adminDatabase.rpc("admin_list_seller_payout_details"),
         adminDatabase
           .from("message_moderation_flags")
           .select(
@@ -121,7 +123,9 @@ function AdminPage() {
     setReports(reportResult.data ?? []);
     setSales(saleResult.data ?? []);
     setDisputes(disputeResult.data ?? []);
-    setMessageFlags(messageFlagResult.data ?? []);\n    if (payoutDetailsResult.error) toast.error("Não foi possível carregar os dados privados de recebimento dos vendedores.");\n    setSellerPayoutDetails((payoutDetailsResult.data ?? []) as Array<{ seller_id: string; display_name: string | null; emola_number: string; account_holder: string }>);
+    setMessageFlags(messageFlagResult.data ?? []);
+    if (payoutDetailsResult.error) toast.error("Não foi possível carregar os dados privados de recebimento dos vendedores.");
+    setSellerPayoutDetails((payoutDetailsResult.data ?? []) as Array<{ seller_id: string; display_name: string | null; emola_number: string; account_holder: string }>);
   }, []);
 
   const verifyAdmin = useCallback(async (): Promise<boolean> => {
