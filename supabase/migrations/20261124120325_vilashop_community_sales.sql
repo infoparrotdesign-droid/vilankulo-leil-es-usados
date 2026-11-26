@@ -733,3 +733,10 @@ create policy sale_disputes_admin_read on public.sale_disputes for select to aut
 
 -- Listing history must survive sale/photo cleanup. Existing bids remain append-only:
 -- no UPDATE/DELETE grant is given to authenticated users.
+
+-- Enforce the same image restrictions at Storage as in the client-side upload validator.
+update storage.buckets
+set public = false,
+    file_size_limit = 5242880,
+    allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp']
+where id = 'boladas-media';
