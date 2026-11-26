@@ -744,7 +744,8 @@ function Marketplace() {
       return;
     }
     if (listing.isSample) {
-      toast.info("Os artigos de exemplo não podem ser guardados.");
+      setIsFavorite((value) => !value);
+      toast.success(isFavorite ? "Artigo de demonstração removido dos favoritos deste ecrã." : "Artigo de demonstração guardado neste ecrã.");
       return;
     }
     setBusy(true);
@@ -774,7 +775,8 @@ function Marketplace() {
       return;
     }
     if (listing.isSample) {
-      toast.info("Este vendedor de exemplo não pode ser seguido.");
+      setIsFollowingSeller((value) => !value);
+      toast.success(isFollowingSeller ? "Deixou de seguir o vendedor de demonstração neste ecrã." : "Está a seguir o vendedor de demonstração neste ecrã.");
       return;
     }
     if (listing.seller_id === sessionUser.id) {
@@ -808,10 +810,6 @@ function Marketplace() {
       toast.info("Entre na sua conta para fazer uma proposta.");
       return;
     }
-    if (listing.isSample) {
-      toast.info("Este anúncio é apenas um exemplo.");
-      return;
-    }
     const data = new FormData(event.currentTarget);
     const amount = z.coerce
       .number()
@@ -819,6 +817,10 @@ function Marketplace() {
       .safeParse(data.get("offerAmount"));
     if (!amount.success) {
       toast.error("Indique um valor válido para a proposta.");
+      return;
+    }
+    if (listing.isSample) {
+      toast.success(`Proposta de demonstração de ${formatPrice(amount.data)} validada neste ecrã. Não foi enviada a um vendedor real.`);
       return;
     }
     const message = String(data.get("offerMessage") ?? "").trim();
@@ -891,7 +893,7 @@ function Marketplace() {
       return;
     }
     if (listing.isSample) {
-      toast.info("Este anúncio é apenas um exemplo.");
+      toast.success("Demonstração: os números oficiais do VilaShop estão apresentados acima. Nenhuma compra ou pagamento real foi criado.");
       return;
     }
     if (listing.listing_type === "auction" && listing.status !== "ended") {
@@ -962,7 +964,19 @@ function Marketplace() {
       return;
     }
     if (listing.isSample) {
-      toast.info("Este leilão serve apenas de exemplo.");
+      const amountInput = new FormData(event.currentTarget).get("amount");
+      const amount = z.coerce.number().refine(isValidMarketplaceAmount).safeParse(amountInput);
+      const currentBid = listing.highest_bid ?? listing.price;
+      if (!amount.success || amount.data <= currentBid) {
+        toast.error(`O lance de demonstração deve superar ${formatPrice(currentBid)}.`);
+        return;
+      }
+      setPublicBidHistory((items) => [
+        ...items,
+        { bid_number: items.length + 1, amount: amount.data, placed_at: new Date().toISOString() },
+      ]);
+      setSelectedListing({ ...listing, highest_bid: amount.data });
+      toast.success("Lance de demonstração registado neste ecrã. Não é uma oferta real.");
       return;
     }
     if (listing.status !== "active") {
@@ -1804,8 +1818,7 @@ function Marketplace() {
                 <span>Estado</span>
                 <strong>{selectedListing.item_condition}</strong>
               </div>
-              {!selectedListing.isSample && (
-                <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
                     variant="outline"
@@ -1825,7 +1838,6 @@ function Marketplace() {
                     {isFollowingSeller ? "A seguir vendedor" : "Seguir vendedor"}
                   </Button>
                 </div>
-              )}
               {selectedListing.listing_type === "auction" && publicBidHistory.length > 0 && (
                 <section className="rounded-xl border p-3">
                   <h3 className="font-semibold">Histórico de propostas</h3>
