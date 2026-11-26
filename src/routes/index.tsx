@@ -1843,25 +1843,25 @@ function Marketplace() {
                 <strong>{selectedListing.item_condition}</strong>
               </div>
               <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() => void toggleFavorite(selectedListing)}
-                  >
-                    <Heart className="mr-2 size-4" fill={isFavorite ? "currentColor" : "none"} />
-                    {isFavorite ? "Guardado" : "Guardar artigo"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={busy || selectedListing.seller_id === sessionUser?.id}
-                    onClick={() => void toggleSellerFollow(selectedListing)}
-                  >
-                    <UserRound className="mr-2 size-4" />
-                    {isFollowingSeller ? "A seguir vendedor" : "Seguir vendedor"}
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => void toggleFavorite(selectedListing)}
+                >
+                  <Heart className="mr-2 size-4" fill={isFavorite ? "currentColor" : "none"} />
+                  {isFavorite ? "Guardado" : "Guardar artigo"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy || selectedListing.seller_id === sessionUser?.id}
+                  onClick={() => void toggleSellerFollow(selectedListing)}
+                >
+                  <UserRound className="mr-2 size-4" />
+                  {isFollowingSeller ? "A seguir vendedor" : "Seguir vendedor"}
+                </Button>
+              </div>
               {selectedListing.listing_type === "auction" && publicBidHistory.length > 0 && (
                 <section className="rounded-xl border p-3">
                   <h3 className="font-semibold">Histórico de propostas</h3>
