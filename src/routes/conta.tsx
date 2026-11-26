@@ -78,6 +78,7 @@ function AccountPage() {
   const [follows, setFollows] = useState<Follow[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
+  // Commission breakdown is fetched only for the authenticated seller, never for buyers.
   const [sellerFinancials, setSellerFinancials] = useState<
     Record<
       string,
