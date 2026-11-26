@@ -13,7 +13,7 @@ alter table public.marketplace_sales
 
 create table if not exists public.seller_payout_details (
   seller_id uuid primary key references public.profiles(id) on delete cascade,
-  emola_number text not null check (emola_number ~ '^(\\+?258)?[0-9]{9}$'),
+  emola_number text not null check (emola_number ~ '^(\+?258)?[0-9]{9}$'),
   account_holder text not null check (char_length(btrim(account_holder)) between 3 and 120),
   updated_at timestamptz not null default now()
 );
@@ -30,7 +30,7 @@ begin
     raise exception 'Inicie sessão e complete o seu perfil.';
   end if;
   normalized_number := regexp_replace(coalesce(_emola_number,''), '[[:space:]-]', '', 'g');
-  if normalized_number !~ '^(\\+?258)?[0-9]{9}$' then
+  if normalized_number !~ '^(\+?258)?[0-9]{9}$' then
     raise exception 'Indique um número e-Mola válido, com 9 dígitos ou indicativo +258.';
   end if;
   if char_length(btrim(coalesce(_account_holder,''))) not between 3 and 120 then
@@ -84,7 +84,7 @@ language plpgsql security definer set search_path = ''
 as $$
 declare created_sale public.marketplace_sales;
 begin
-  if _payment_method not in ('e-Mola','M-Pesa') then
+  if _payment_method is null or _payment_method not in ('e-Mola','M-Pesa') then
     raise exception 'Escolha e-Mola ou M-Pesa para pagar ao VilaShop.';
   end if;
   created_sale := public.create_marketplace_sale(_listing_id,_delivery_method,_offer_id);
