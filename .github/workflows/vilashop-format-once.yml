@@ -35,5 +35,6 @@ jobs:
             echo "No formatting changes required."
           else
             git commit -m "Format VilaShop seller commission privacy changes"
+            git pull --rebase origin vilashop/rebuild-foundation
             git push origin HEAD:vilashop/rebuild-foundation
           fi
