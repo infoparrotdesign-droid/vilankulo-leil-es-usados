@@ -390,8 +390,12 @@ function Marketplace() {
     let current = true;
     setIsFavorite(false);
     setIsFollowingSeller(false);
+    if (!selectedListing) {
+      setPublicBidHistory([]);
+      return;
+    }
+    if (selectedListing.isSample) return;
     setPublicBidHistory([]);
-    if (!selectedListing || selectedListing.isSample) return;
     void (async () => {
       const historyRequest = communityDb.rpc("get_listing_bid_history", {
         _listing_id: selectedListing.id,
