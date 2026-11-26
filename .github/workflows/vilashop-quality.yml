@@ -52,7 +52,7 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Lint (strict)
+      - name: Lint (strict, no ignored errors)
         run: bun run lint
 
       - name: Strict lint for VilaShop safety and moderation helpers
