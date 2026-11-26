@@ -2,7 +2,7 @@ const { chromium } = require("playwright");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const baseURL = process.env.VILASHOP_PREVIEW_URL; // Local GitHub Actions preview; no Lovable workspace gate.
+const baseURL = process.env.VILASHOP_PREVIEW_URL; // Local GitHub Actions preview, isolated from Lovable workspace access.
 if (!baseURL) throw new Error("VILASHOP_PREVIEW_URL não definido.");
 
 const results = [];
