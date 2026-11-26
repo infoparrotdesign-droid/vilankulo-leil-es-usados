@@ -123,12 +123,6 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      get_seller_contact: {
-        Args: { _listing_id: string };
-        Returns: {
-          phone: string;
-        }[];
-      };
       place_bid: {
         Args: { _amount: number; _listing_id: string };
         Returns: number;
