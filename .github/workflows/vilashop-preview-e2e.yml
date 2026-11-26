@@ -7,7 +7,6 @@ on:
     paths:
       - ".github/workflows/vilashop-preview-e2e.yml"
       - "tests/preview-e2e/**"
-      - "README.md"
 
 permissions:
   contents: read
@@ -18,33 +17,52 @@ concurrency:
 
 jobs:
   preview-browser:
-    name: Browser smoke tests against Lovable Preview
+    name: Browser audit of the exact GitHub application commit
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
-      - name: Check out audit branch
+      - name: Check out the application source from the protected development branch
         uses: actions/checkout@v5
-
-      - name: Install Node.js
-        uses: actions/setup-node@v5
         with:
-          node-version: 22
+          ref: vilashop/rebuild-foundation
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install application dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Start an isolated local Preview server
+        run: |
+          bun run dev -- --host 127.0.0.1 --port 4173 > /tmp/vilashop-vite.log 2>&1 &
+          echo $! > /tmp/vilashop-vite.pid
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              echo "VilaShop dev server is ready."
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/vilashop-vite.log
+          exit 1
 
       - name: Install isolated Playwright
         run: |
           npm install --prefix /tmp/vilashop-playwright --no-save --no-package-lock playwright
           /tmp/vilashop-playwright/node_modules/.bin/playwright install --with-deps chromium
 
-      - name: Test public Preview without creating real data
+      - name: Test the application without writing to Supabase
         env:
-          VILASHOP_PREVIEW_URL: https://id-preview--922cb125-508d-408e-a007-65a226b8ae76.lovable.app
+          VILASHOP_PREVIEW_URL: http://127.0.0.1:4173
           NODE_PATH: /tmp/vilashop-playwright/node_modules
         run: node tests/preview-e2e/audit.cjs
 
-      - name: Upload browser audit report
+      - name: Upload browser audit report and screenshot
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: vilashop-preview-browser-audit
+          name: vilashop-github-preview-browser-audit
           path: artifacts/
           if-no-files-found: warn
