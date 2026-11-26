@@ -133,11 +133,13 @@ export function getComparableListingPrice(price: number, highestBid: number | nu
 
 /** Keeps listing titles readable and consistent before persistence. */
 export function normalizeListingTitle(value: string): string {
-  return value
-    // eslint-disable-next-line no-control-regex -- intentionally strips control characters from user input.
-    .replace(/[\u0000-\u001f\u007f]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  return (
+    value
+      // eslint-disable-next-line no-control-regex -- intentionally strips control characters from user input.
+      .replace(/[\\u0000-\\u001f\\u007f]/g, " ")
+      .replace(/\\s+/g, " ")
+      .trim()
+  );
 }
 
 /** Removes invisible control characters while preserving paragraph breaks. */
