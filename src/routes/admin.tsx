@@ -96,13 +96,7 @@ function AdminPage() {
           .select("id,listing_id,reporter_id,reason,details,status,created_at")
           .order("created_at", { ascending: true })
           .limit(50),
-        adminDatabase
-          .from("marketplace_sales")
-          .select(
-            "id,listing_id,buyer_id,seller_id,agreed_price,commission_amount,buyer_total_amount,seller_net_amount,status,payment_reference,created_at",
-          )
-          .order("created_at", { ascending: false })
-          .limit(100),
+        adminDatabase.rpc("admin_list_marketplace_sales"),
         adminDatabase
           .from("sale_disputes")
           .select("id,sale_id,opened_by,reason,evidence_note,status,created_at")
