@@ -172,14 +172,29 @@ jobs:
     timeout-minutes: 10
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_ID: ibwasunbdqplanwhnexf
     steps:
-      - name: Validate cleanup secret
-        run: test -n "$SUPABASE_ACCESS_TOKEN"
+      - name: Validate cleanup deployment secret
+        shell: bash
+        run: test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::Missing production secret SUPABASE_ACCESS_TOKEN"; exit 1; }
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: 3.3.0
+
+      - name: Configure a matching one-run cleanup token
+        id: cleanup_token
+        shell: bash
+        run: |
+          CLEANUP_TOKEN="$(openssl rand -hex 32)"
+          echo "::add-mask::$CLEANUP_TOKEN"
+          printf '%s\\n' "CLEANUP_TOKEN=$CLEANUP_TOKEN" >> "$GITHUB_ENV"
+          supabase secrets set --yes --project-ref "$SUPABASE_PROJECT_ID" "VILASHOP_CLEANUP_TOKEN=$CLEANUP_TOKEN"
 
       - name: Run photo cleanup function
         shell: bash
         run: |
-          CLEANUP_TOKEN="$(printf '%s' "$SUPABASE_ACCESS_TOKEN" | sha256sum | cut -d' ' -f1)"
           curl --fail-with-body --silent --show-error \
             --request POST \
             --header "x-vilashop-cleanup-token: $CLEANUP_TOKEN" \
