@@ -549,8 +549,8 @@ function AccountPage() {
 
         <Section icon={<Wallet />} title="Dados para receber pagamentos" count="Privado">
           <p className="mb-3 text-sm text-muted-foreground">
-            Registe a sua carteira e-Mola. Estes dados são privados e só a administração do
-            VilaShop os consulta para lhe transferir os valores devidos.
+            Registe a sua carteira e-Mola. Estes dados são privados e só a administração do VilaShop
+            os consulta para lhe transferir os valores devidos.
           </p>
           <form
             className="grid gap-3 rounded-xl border bg-card p-4 sm:grid-cols-2"
@@ -579,10 +579,7 @@ function AccountPage() {
               />
             </div>
             <div className="sm:col-span-2">
-              <Button
-                type="submit"
-                disabled={busy || !payoutNumber.trim() || !payoutHolder.trim()}
-              >
+              <Button type="submit" disabled={busy || !payoutNumber.trim() || !payoutHolder.trim()}>
                 Guardar dados de recebimento
               </Button>
             </div>
