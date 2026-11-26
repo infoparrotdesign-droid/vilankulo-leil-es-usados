@@ -532,7 +532,7 @@ function AccountPage() {
           )}
         </Section>
 
-        <Section icon={<Wallet />} title="Dados para receber pagamentos" count={null}>
+        <Section icon={<Wallet />} title="Dados para receber pagamentos">
           <p className="mb-3 text-sm text-muted-foreground">
             Registe a sua carteira e-Mola. Estes dados são privados e só a administração do VilaShop os consulta para lhe transferir os valores devidos.
           </p>
