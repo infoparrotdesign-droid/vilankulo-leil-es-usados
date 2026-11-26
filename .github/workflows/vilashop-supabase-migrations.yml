@@ -52,7 +52,7 @@ jobs:
   deploy:
     # Production linking, dry-run, and Edge Function deployment are manual-only.
     # A push to the repository must never perform production operations implicitly.
-    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.apply_migrations == true || inputs.run_photo_cleanup == true) }}
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.apply_migrations == true || inputs.run_photo_cleanup == true)) }}
     name: Test direct PostgreSQL connection
     runs-on: ubuntu-latest
     environment: production
