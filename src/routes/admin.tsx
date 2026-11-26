@@ -97,34 +97,34 @@ function AdminPage() {
       messageFlagResult,
       payoutDetailsResult,
     ] = await Promise.all([
-        adminDatabase
-          .from("listings")
-          .select(
-            "id,title,description,category,item_condition,listing_type,price,status,created_at,seller_id",
-          )
-          .eq("status", "pending_review")
-          .order("created_at", { ascending: true })
-          .limit(50),
-        adminDatabase
-          .from("listing_reports")
-          .select("id,listing_id,reporter_id,reason,details,status,created_at")
-          .order("created_at", { ascending: true })
-          .limit(50),
-        adminDatabase.rpc("admin_list_marketplace_sales"),
-        adminDatabase
-          .from("sale_disputes")
-          .select("id,sale_id,opened_by,reason,evidence_note,status,created_at")
-          .order("created_at", { ascending: true })
-          .limit(50),
-        adminDatabase
-          .from("message_moderation_flags")
-          .select(
-            "id,message_id,conversation_id,flagged_by,category,message_content,details,review_status,email_status,created_at",
-          )
-          .order("created_at", { ascending: false })
-          .limit(100),
-        adminDatabase.rpc("admin_list_seller_payout_details"),
-      ]);
+      adminDatabase
+        .from("listings")
+        .select(
+          "id,title,description,category,item_condition,listing_type,price,status,created_at,seller_id",
+        )
+        .eq("status", "pending_review")
+        .order("created_at", { ascending: true })
+        .limit(50),
+      adminDatabase
+        .from("listing_reports")
+        .select("id,listing_id,reporter_id,reason,details,status,created_at")
+        .order("created_at", { ascending: true })
+        .limit(50),
+      adminDatabase.rpc("admin_list_marketplace_sales"),
+      adminDatabase
+        .from("sale_disputes")
+        .select("id,sale_id,opened_by,reason,evidence_note,status,created_at")
+        .order("created_at", { ascending: true })
+        .limit(50),
+      adminDatabase
+        .from("message_moderation_flags")
+        .select(
+          "id,message_id,conversation_id,flagged_by,category,message_content,details,review_status,email_status,created_at",
+        )
+        .order("created_at", { ascending: false })
+        .limit(100),
+      adminDatabase.rpc("admin_list_seller_payout_details"),
+    ]);
     if (listingResult.error) toast.error("Não foi possível carregar a fila de anúncios.");
     if (reportResult.error || saleResult.error || disputeResult.error)
       toast.error("Algumas filas aguardam a aplicação da migration comunitária.");
