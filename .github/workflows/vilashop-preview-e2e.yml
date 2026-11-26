@@ -1,0 +1,49 @@
+name: VilaShop - Preview browser audit
+
+on:
+  push:
+    branches:
+      - vilashop/preview-e2e-audit
+    paths:
+      - ".github/workflows/vilashop-preview-e2e.yml"
+      - "tests/preview-e2e/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vilashop-preview-e2e
+  cancel-in-progress: true
+
+jobs:
+  preview-browser:
+    name: Browser smoke tests against Lovable Preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out audit branch
+        uses: actions/checkout@v5
+
+      - name: Install Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Install isolated Playwright
+        run: |
+          npm install --prefix /tmp/vilashop-playwright --no-save --no-package-lock playwright
+          /tmp/vilashop-playwright/node_modules/.bin/playwright install --with-deps chromium
+
+      - name: Test public Preview without creating real data
+        env:
+          VILASHOP_PREVIEW_URL: https://id-preview--922cb125-508d-408e-a007-65a226b8ae76.lovable.app
+          NODE_PATH: /tmp/vilashop-playwright/node_modules
+        run: node tests/preview-e2e/audit.cjs
+
+      - name: Upload browser audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vilashop-preview-browser-audit
+          path: artifacts/preview-e2e-report.md
+          if-no-files-found: warn
