@@ -78,12 +78,25 @@ function AdminPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- relation rows are selected dynamically by the admin queue.
   const [disputes, setDisputes] = useState<any[]>([]);
   const [messageFlags, setMessageFlags] = useState<AdminMessageFlag[]>([]);
-  const [sellerPayoutDetails, setSellerPayoutDetails] = useState<Array<{ seller_id: string; display_name: string | null; emola_number: string; account_holder: string }>>([]);
+  const [sellerPayoutDetails, setSellerPayoutDetails] = useState<
+    Array<{
+      seller_id: string;
+      display_name: string | null;
+      emola_number: string;
+      account_holder: string;
+    }>
+  >([]);
   const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
 
   const loadQueue = useCallback(async () => {
-    const [listingResult, reportResult, saleResult, disputeResult, messageFlagResult, payoutDetailsResult] =
-      await Promise.all([
+    const [
+      listingResult,
+      reportResult,
+      saleResult,
+      disputeResult,
+      messageFlagResult,
+      payoutDetailsResult,
+    ] = await Promise.all([
         adminDatabase
           .from("listings")
           .select(
@@ -124,8 +137,17 @@ function AdminPage() {
     setSales(saleResult.data ?? []);
     setDisputes(disputeResult.data ?? []);
     setMessageFlags(messageFlagResult.data ?? []);
-    if (payoutDetailsResult.error) toast.error("Não foi possível carregar os dados privados de recebimento dos vendedores.");
-    setSellerPayoutDetails((payoutDetailsResult.data ?? []) as Array<{ seller_id: string; display_name: string | null; emola_number: string; account_holder: string }>);
+    if (payoutDetailsResult.error) {
+      toast.error("Não foi possível carregar os dados privados de recebimento dos vendedores.");
+    }
+    setSellerPayoutDetails(
+      (payoutDetailsResult.data ?? []) as Array<{
+        seller_id: string;
+        display_name: string | null;
+        emola_number: string;
+        account_holder: string;
+      }>,
+    );
   }, []);
 
   const verifyAdmin = useCallback(async (): Promise<boolean> => {
@@ -539,19 +561,31 @@ function AdminPage() {
                     Vendedor {sale.seller_id.slice(0, 8)}
                   </p>
                   {(() => {
-                    const payout = sellerPayoutDetails.find((item) => item.seller_id === sale.seller_id);
+                    const payout = sellerPayoutDetails.find(
+                      (item) => item.seller_id === sale.seller_id,
+                    );
                     return (
                       <div className="mt-3 rounded-lg border bg-muted/40 p-3 text-sm">
-                        <p className="font-semibold">Dados privados para pagar o vendedor via e-Mola</p>
+                        <p className="font-semibold">
+                          Dados privados para pagar o vendedor via e-Mola
+                        </p>
                         {payout ? (
                           <>
-                            <p className="mt-1">Titular: <strong>{payout.account_holder}</strong></p>
-                            <p>Número e-Mola: <strong>{payout.emola_number}</strong></p>
+                            <p className="mt-1">
+                              Titular: <strong>{payout.account_holder}</strong>
+                            </p>
+                            <p>
+                              Número e-Mola: <strong>{payout.emola_number}</strong>
+                            </p>
                           </>
                         ) : (
-                          <p className="mt-1 text-muted-foreground">O vendedor ainda não registou os seus dados e-Mola.</p>
+                          <p className="mt-1 text-muted-foreground">
+                            O vendedor ainda não registou os seus dados e-Mola.
+                          </p>
                         )}
-                        <p className="mt-1 text-xs text-muted-foreground">Conteúdo da transferência: VILASHOP</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Conteúdo da transferência: VILASHOP
+                        </p>
                       </div>
                     );
                   })()}
