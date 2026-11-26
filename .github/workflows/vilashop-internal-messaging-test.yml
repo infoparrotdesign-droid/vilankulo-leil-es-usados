@@ -1,0 +1,41 @@
+name: VilaShop - Internal messaging SQL tests
+
+on:
+  pull_request:
+    branches:
+      - vilashop/rebuild-foundation
+    paths:
+      - "supabase/migrations/20261126120000_vilashop_internal_messaging.sql"
+      - "supabase/tests/internal-messaging-setup.sql"
+      - "supabase/tests/internal-messaging.test.sql"
+      - ".github/workflows/vilashop-internal-messaging-test.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  internal-messaging:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: vilashop_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d vilashop_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v5
+      - name: Apply isolated fixtures, migration and assertions
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d vilashop_test -v ON_ERROR_STOP=1 -f supabase/tests/internal-messaging-setup.sql
+          psql -h localhost -U postgres -d vilashop_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261126120000_vilashop_internal_messaging.sql
+          psql -h localhost -U postgres -d vilashop_test -v ON_ERROR_STOP=1 -f supabase/tests/internal-messaging.test.sql
