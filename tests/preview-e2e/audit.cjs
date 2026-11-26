@@ -47,7 +47,6 @@ const openSelector = "button.market-card-open";
       const summary = (await card.innerText()).replace(/\s+/g, " ").slice(0, 120);
       cardTitles.push(summary);
       await card.locator(openSelector).click();
-      const dialog = page.getByRole("dialog").filter({ has: page.locator(openSelector).locator("..") }).first();
       const listingDialog = page.getByRole("dialog").first();
       const visible = await listingDialog.isVisible().catch(() => false);
       record(`Abrir anúncio ${i + 1}`, visible ? "APROVADO" : "FALHOU", summary);
