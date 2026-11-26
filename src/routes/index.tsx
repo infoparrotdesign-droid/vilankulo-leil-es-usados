@@ -900,14 +900,20 @@ function Marketplace() {
     }
     const data = new FormData(event.currentTarget);
     const deliveryMethod = String(data.get("deliveryMethod"));
+    const paymentMethod = String(data.get("paymentMethod"));
     if (deliveryMethod !== "in_person" && deliveryMethod !== "seller_delivery") {
       toast.error("Escolha o método de entrega.");
       return;
     }
+    if (paymentMethod !== "e-Mola" && paymentMethod !== "M-Pesa") {
+      toast.error("Escolha e-Mola ou M-Pesa para pagar ao VilaShop.");
+      return;
+    }
     setBusy(true);
-    const { error } = await communityDb.rpc("create_marketplace_sale", {
+    const { error } = await communityDb.rpc("create_marketplace_sale_with_payment", {
       _listing_id: listing.id,
       _delivery_method: deliveryMethod,
+      _payment_method: paymentMethod,
       _offer_id: null,
     });
     setBusy(false);
@@ -1881,6 +1887,12 @@ function Marketplace() {
                         <option value="seller_delivery">Entrega pelo vendedor</option>
                       </select>
                     </FormField>
+                    <FormField label="Como pretende pagar ao VilaShop?" htmlFor="auction-payment-method">
+                      <select id="auction-payment-method" name="paymentMethod" className="market-form-select" defaultValue="e-Mola">
+                        <option value="e-Mola">e-Mola · 875 492 563</option>
+                        <option value="M-Pesa">M-Pesa · 850 492 563</option>
+                      </select>
+                    </FormField>
                     <Button type="submit" className="market-form-submit" disabled={busy}>
                       <ShoppingBag size={16} /> Confirmar compra como vencedor
                     </Button>
@@ -1941,6 +1953,12 @@ function Marketplace() {
                       >
                         <option value="in_person">Encontro presencial</option>
                         <option value="seller_delivery">Entrega pelo vendedor</option>
+                      </select>
+                    </FormField>
+                    <FormField label="Como pretende pagar ao VilaShop?" htmlFor="sale-payment-method">
+                      <select id="sale-payment-method" name="paymentMethod" className="market-form-select" defaultValue="e-Mola">
+                        <option value="e-Mola">e-Mola · 875 492 563</option>
+                        <option value="M-Pesa">M-Pesa · 850 492 563</option>
                       </select>
                     </FormField>
                     <Button type="submit" className="market-form-submit" disabled={busy}>
