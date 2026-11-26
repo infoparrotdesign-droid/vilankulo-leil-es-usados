@@ -127,9 +127,11 @@ begin
     raise exception 'Não tem autorização para consultar esta conversa.';
   end if;
 
-  update public.marketplace_messages
+  update public.marketplace_messages as message_row
   set read_at = now()
-  where conversation_id = _conversation_id and sender_id <> uid and read_at is null;
+  where message_row.conversation_id = _conversation_id
+    and message_row.sender_id <> uid
+    and message_row.read_at is null;
 
   return query
     select m.id, m.sender_id, coalesce(p.display_name, 'Utilizador VilaShop'),
