@@ -104,6 +104,9 @@ function AccountPage() {
   const [disputes, setDisputes] = useState<Record<string, { reason: string; evidence: string }>>(
     {},
   );
+  const [payoutNumber, setPayoutNumber] = useState("");
+  const [payoutHolder, setPayoutHolder] = useState("");
+  const [payoutDetailsLoading, setPayoutDetailsLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -127,6 +130,7 @@ function AccountPage() {
       offerResult,
       saleResult,
       sellerFinanceResult,
+      payoutDetailsResult,
     ] = await Promise.all([
       db
         .from("notifications")
@@ -156,6 +160,7 @@ function AccountPage() {
         .order("created_at", { ascending: false })
         .limit(100),
       db.rpc("get_my_seller_sale_financials"),
+      db.rpc("get_my_seller_payout_details"),
     ]);
 
     if (noticeResult.error)
@@ -169,7 +174,7 @@ function AccountPage() {
     setFavorites((favoriteResult.data ?? []) as Favorite[]);
     setFollows((followResult.data ?? []) as Follow[]);
     setOffers((offerResult.data ?? []) as Offer[]);
-    setSales((saleResult.data ?? []) as Sale[]);
+    setSales((saleResult.data ?? []) as Sale[]);\n    const payoutDetails = (payoutDetailsResult.data ?? []) as Array<{ emola_number: string; account_holder: string }>;\n    setPayoutNumber(payoutDetails[0]?.emola_number ?? "");\n    setPayoutHolder(payoutDetails[0]?.account_holder ?? "");
     if (sellerFinanceResult.error) {
       toast.error("Não foi possível carregar os detalhes financeiros das suas vendas.");
       setSellerFinancials({});
@@ -232,7 +237,7 @@ function AccountPage() {
     }
   }
 
-  async function reportPayment(event: FormEvent<HTMLFormElement>, saleId: string) {
+  async function savePayoutDetails(event: FormEvent<HTMLFormElement>) {\n    event.preventDefault();\n    const { error } = await db.rpc("save_my_seller_payout_details", { _emola_number: payoutNumber, _account_holder: payoutHolder });\n    if (error) toast.error(error.message);\n    else toast.success("Dados e-Mola guardados de forma privada para a administração.");\n  }\n\n  async function reportPayment(event: FormEvent<HTMLFormElement>, saleId: string) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const method = String(form.get("method") ?? "").trim();
@@ -527,6 +532,25 @@ function AccountPage() {
           )}
         </Section>
 
+        <Section icon={<Wallet />} title="Dados para receber pagamentos" count={null}>
+          <p className="mb-3 text-sm text-muted-foreground">
+            Registe a sua carteira e-Mola. Estes dados são privados e só a administração do VilaShop os consulta para lhe transferir os valores devidos.
+          </p>
+          <form className="grid gap-3 rounded-xl border bg-card p-4 sm:grid-cols-2" onSubmit={(event) => void savePayoutDetails(event)}>
+            <div className="grid gap-1">
+              <Label htmlFor="seller-emola-number">Número e-Mola</Label>
+              <Input id="seller-emola-number" value={payoutNumber} onChange={(event) => setPayoutNumber(event.target.value)} placeholder="84xxxxxxx" required maxLength={16} />
+            </div>
+            <div className="grid gap-1">
+              <Label htmlFor="seller-emola-holder">Nome do titular</Label>
+              <Input id="seller-emola-holder" value={payoutHolder} onChange={(event) => setPayoutHolder(event.target.value)} placeholder="Nome registado na carteira" required maxLength={120} />
+            </div>
+            <div className="sm:col-span-2">
+              <Button type="submit" disabled={busy || !payoutNumber.trim() || !payoutHolder.trim()}>Guardar dados de recebimento</Button>
+            </div>
+          </form>
+        </Section>
+
         <Section icon={<Wallet />} title="Compras, pagamentos e entregas" count={sales.length}>
           {sales.length === 0 ? (
             <Empty>Quando iniciar uma compra, o acompanhamento aparecerá aqui.</Empty>
@@ -576,17 +600,21 @@ function AccountPage() {
                     className="mt-4 grid gap-3 rounded-lg bg-muted/60 p-3 sm:grid-cols-3"
                     onSubmit={(event) => void reportPayment(event, sale.id)}
                   >
-                    <div className="grid gap-1">
-                      <Label htmlFor={`method-${sale.id}`}>Meio de pagamento</Label>
-                      <Input
-                        id={`method-${sale.id}`}
-                        name="method"
-                        placeholder="Transferência, M-Pesa Business…"
-                        required
-                      />
+                    <div className="sm:col-span-3 rounded-lg border bg-background p-3 text-sm">
+                      <p className="font-semibold">Pague ao VilaShop — titular: JUNIOR PAULO FERNANDO HUATE</p>
+                      <p className="mt-1">e-Mola: <strong>875 492 563</strong></p>
+                      <p>M-Pesa: <strong>850 492 563</strong></p>
+                      <p className="mt-1 text-xs text-muted-foreground">Use o mesmo valor total indicado acima. A confirmação só será feita depois da verificação manual pela equipa VilaShop.</p>
                     </div>
                     <div className="grid gap-1">
-                      <Label htmlFor={`reference-${sale.id}`}>Referência</Label>
+                      <Label htmlFor={`method-${sale.id}`}>Carteira utilizada</Label>
+                      <select id={`method-${sale.id}`} name="method" className="h-10 rounded-md border bg-background px-3 text-sm" defaultValue="e-Mola" required>
+                        <option value="e-Mola">e-Mola</option>
+                        <option value="M-Pesa">M-Pesa</option>
+                      </select>
+                    </div>
+                    <div className="grid gap-1">
+                      <Label htmlFor={`reference-${sale.id}`}>Referência da transacção</Label>
                       <Input id={`reference-${sale.id}`} name="reference" required />
                     </div>
                     <div className="flex items-end">
