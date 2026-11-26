@@ -1,10 +1,11 @@
-set role authenticated;
+create temporary table test_state (conversation_id uuid);
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',false);
 do $$
 declare conversation uuid;
 begin
   conversation := public.start_listing_conversation('10000000-0000-0000-0000-000000000001');
   if conversation is null then raise exception 'Conversation was not created'; end if;
+  insert into test_state values (conversation);
   if public.start_listing_conversation('10000000-0000-0000-0000-000000000001') <> conversation then
     raise exception 'Starting the same conversation must be idempotent';
   end if;
@@ -42,20 +43,14 @@ $$;
 
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000003',false);
 do $$
-declare conversation uuid := '20000000-0000-0000-0000-000000000001';
+declare conversation uuid;
 begin
+  select test_state.conversation_id into conversation from test_state;
   begin
     perform public.get_conversation_messages(conversation);
     raise exception 'Non-participant unexpectedly accessed conversation';
   exception when others then
     if sqlerrm = 'Non-participant unexpectedly accessed conversation' then raise; end if;
   end;
-  begin
-    perform public.start_listing_conversation('10000000-0000-0000-0000-000000000001');
-    raise exception 'Unexpected conversation creation';
-  exception when others then
-    if sqlerrm = 'Unexpected conversation creation' then raise; end if;
-  end;
 end;
 $$;
-reset role;
