@@ -37,10 +37,13 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, type = "button", ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
+    // Action buttons must never submit a surrounding form by accident. Forms opt in
+    // explicitly with type="submit"; links rendered through Slot keep their own props.
+    const forwardedProps = asChild ? props : { ...props, type };
     return (
-      <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
+      <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...forwardedProps} />
     );
   },
 );
