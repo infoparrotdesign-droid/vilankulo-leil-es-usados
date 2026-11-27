@@ -1,5 +1,6 @@
 -- Assertions for the manual e-Mola/M-Pesa migration; runs only on disposable PostgreSQL.
 \set ON_ERROR_STOP on
+begin;
 
 -- Seller saves private e-Mola payout details and can read only their own record.
 set role authenticated;
