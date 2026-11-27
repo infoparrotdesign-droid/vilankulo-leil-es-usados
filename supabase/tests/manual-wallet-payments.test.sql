@@ -95,7 +95,7 @@ end $$;
 select public.create_marketplace_sale_with_payment(
  '50000000-0000-4000-8000-000000000005','in_person','e-Mola',null
 );
-do $ begin
+do $fn$ begin
   begin
     perform public.report_marketplace_payment(
       public.get_test_sale_id('50000000-0000-4000-8000-000000000005'),
@@ -105,7 +105,7 @@ do $ begin
   exception when others then
     if sqlerrm like 'FAIL:%' then raise; end if;
   end;
-end $;
+end $fn$;
 
 -- An open dispute blocks settlement; oversized references are also rejected.
 reset role;
@@ -113,7 +113,7 @@ update public.marketplace_sales set status='delivery_confirmed'
 where listing_id='50000000-0000-4000-8000-000000000005';
 set role authenticated;
 select set_config('request.jwt.claim.sub','30000000-0000-4000-8000-000000000003',false);
-do $ begin
+do $fn$ begin
   begin
     perform public.admin_record_seller_payout(
       public.get_test_sale_id('50000000-0000-4000-8000-000000000005'),
@@ -123,14 +123,14 @@ do $ begin
   exception when others then
     if sqlerrm like 'FAIL:%' then raise; end if;
   end;
-end $;
+end $fn$;
 reset role;
 insert into public.sale_disputes(sale_id,status)
 select id,'open' from public.marketplace_sales
 where listing_id='50000000-0000-4000-8000-000000000005';
 set role authenticated;
 select set_config('request.jwt.claim.sub','30000000-0000-4000-8000-000000000003',false);
-do $ begin
+do $fn$ begin
   begin
     perform public.admin_record_seller_payout(
       public.get_test_sale_id('50000000-0000-4000-8000-000000000005'),
@@ -140,7 +140,7 @@ do $ begin
   exception when others then
     if sqlerrm like 'FAIL:%' then raise; end if;
   end;
-end $;
+end $fn$;
 
 reset role;
 rollback;
