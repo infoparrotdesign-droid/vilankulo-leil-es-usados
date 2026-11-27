@@ -1,6 +1,7 @@
 name: VilaShop - Isolated manual wallet migration test
 
 on:
+  workflow_dispatch:
   pull_request:
     branches:
       - vilashop/rebuild-foundation
