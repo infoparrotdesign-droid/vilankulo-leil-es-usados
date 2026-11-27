@@ -2038,9 +2038,10 @@ function Marketplace() {
                   <Button
                     type="button"
                     variant="ghost"
+                    disabled={busy}
                     onClick={() => void startSellerConversation(selectedListing)}
                   >
-                    Iniciar conversa
+                    {busy ? "A abrir conversa…" : "Iniciar conversa"}
                   </Button>
                 </div>
               )}
