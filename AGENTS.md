@@ -31,3 +31,4 @@ use the editor.
 
 ## Project architecture
 - Keep listings public-read with database-enforced ownership and auction rules; keep profiles private and expose seller contact only through the authenticated contact function, so browsing stays open without revealing member details.
+- Serve public listing photos through short-lived signed links after confirming the listing is active; keep direct storage reads scoped to owners and moderators.

@@ -1,0 +1,153 @@
+/* VilaShop brand system — warm orange, charcoal, natural cream and deep green. */
+:root {
+  color-scheme: light;
+  --background: oklch(0.9747 0.0192 72.58);
+  --foreground: oklch(0.278 0.0156 182.83);
+  --card: oklch(0.997 0.006 75);
+  --card-foreground: oklch(0.278 0.0156 182.83);
+  --popover: oklch(0.997 0.006 75);
+  --popover-foreground: oklch(0.278 0.0156 182.83);
+  --primary: oklch(0.6185 0.1773 42.05);
+  --primary-foreground: oklch(0.997 0.006 75);
+  --secondary: oklch(0.936 0.034 58.82);
+  --secondary-foreground: oklch(0.3821 0.017 173.23);
+  --muted: oklch(0.951 0.015 72);
+  --muted-foreground: oklch(0.49 0.025 65);
+  --accent: oklch(0.936 0.034 58.82);
+  --accent-foreground: oklch(0.4746 0.1439 37.01);
+  --border: oklch(0.89 0.025 68);
+  --input: oklch(0.87 0.025 68);
+  --ring: oklch(0.6185 0.1773 42.05);
+  --sidebar: oklch(0.96 0.015 72);
+  --sidebar-foreground: oklch(0.278 0.0156 182.83);
+  --sidebar-primary: oklch(0.6185 0.1773 42.05);
+  --sidebar-primary-foreground: oklch(0.997 0.006 75);
+  --sidebar-accent: oklch(0.936 0.034 58.82);
+  --sidebar-accent-foreground: oklch(0.278 0.0156 182.83);
+  --sidebar-border: oklch(0.89 0.025 68);
+  --sidebar-ring: oklch(0.6185 0.1773 42.05);
+
+  --market-forest: oklch(0.278 0.0156 182.83);
+  --market-forest-deep: oklch(0.22 0.018 183);
+  --market-coral: oklch(0.6185 0.1773 42.05);
+  --market-coral-soft: oklch(0.936 0.034 58.82);
+  --market-mint: oklch(0.93 0.025 160);
+  --market-blue: oklch(0.956 0.014 75);
+  --market-yellow: oklch(0.955 0.045 88);
+  --market-lilac: oklch(0.945 0.024 57);
+  --market-sand: oklch(0.954 0.027 77);
+  --market-success: oklch(0.4662 0.0668 178.44);
+  --market-warm-white: oklch(0.997 0.006 75);
+  --market-line: oklch(0.89 0.025 68);
+  --market-gray: oklch(0.49 0.025 65);
+}
+
+.dark {
+  color-scheme: dark;
+  --background: oklch(0.22 0.018 183);
+  --foreground: oklch(0.96 0.012 75);
+  --card: oklch(0.27 0.018 183);
+  --card-foreground: oklch(0.96 0.012 75);
+  --popover: oklch(0.27 0.018 183);
+  --popover-foreground: oklch(0.96 0.012 75);
+  --primary: oklch(0.72 0.15 43);
+  --primary-foreground: oklch(0.22 0.018 183);
+  --secondary: oklch(0.32 0.022 75);
+  --secondary-foreground: oklch(0.96 0.012 75);
+  --muted: oklch(0.30 0.018 183);
+  --muted-foreground: oklch(0.75 0.018 75);
+  --accent: oklch(0.34 0.045 43);
+  --accent-foreground: oklch(0.96 0.012 75);
+  --border: oklch(0.38 0.018 183);
+  --input: oklch(0.38 0.018 183);
+  --ring: oklch(0.72 0.15 43);
+  --sidebar: oklch(0.24 0.018 183);
+  --sidebar-foreground: oklch(0.96 0.012 75);
+  --sidebar-primary: oklch(0.72 0.15 43);
+  --sidebar-primary-foreground: oklch(0.22 0.018 183);
+  --sidebar-accent: oklch(0.32 0.022 75);
+  --sidebar-accent-foreground: oklch(0.96 0.012 75);
+  --sidebar-border: oklch(0.38 0.018 183);
+  --sidebar-ring: oklch(0.72 0.15 43);
+
+  --market-forest: oklch(0.82 0.025 75);
+  --market-forest-deep: oklch(0.18 0.018 183);
+  --market-coral: oklch(0.72 0.15 43);
+  --market-coral-soft: oklch(0.34 0.045 43);
+  --market-mint: oklch(0.32 0.035 165);
+  --market-blue: oklch(0.28 0.02 183);
+  --market-yellow: oklch(0.36 0.05 88);
+  --market-lilac: oklch(0.34 0.035 57);
+  --market-sand: oklch(0.33 0.025 75);
+  --market-success: oklch(0.72 0.09 165);
+  --market-warm-white: oklch(0.25 0.018 183);
+  --market-line: oklch(0.38 0.018 183);
+  --market-gray: oklch(0.75 0.018 75);
+}
+
+/* Strong orange is reserved for actions and memorable brand cues. */
+.market-intro {
+  background:
+    radial-gradient(ellipse at 82% 12%, color-mix(in oklab, var(--market-coral) 22%, transparent), transparent 38%),
+    var(--market-forest);
+}
+.market-logo-mark,
+.market-list-button,
+.market-register-button,
+.market-search-submit,
+.market-seller-cta,
+.market-form-submit {
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+.market-list-button,
+.market-register-button,
+.market-search-submit,
+.market-seller-cta {
+  background: var(--market-coral);
+  color: oklch(0.99 0.008 75);
+}
+.market-list-button:hover,
+.market-register-button:hover,
+.market-search-submit:hover,
+.market-seller-cta:hover {
+  background: oklch(0.5256 0.1377 43.54);
+  color: oklch(0.99 0.008 75);
+}
+.market-form-submit {
+  background: var(--market-forest);
+  color: var(--market-warm-white);
+}
+.market-form-submit:hover {
+  background: var(--market-forest-deep);
+}
+.market-benefit-blue,
+.market-category-blue,
+.market-category-violet {
+  background: var(--market-sand);
+  color: var(--market-forest);
+}
+.market-community-section {
+  background: var(--market-blue);
+}
+.market-card-price,
+.market-detail-price strong {
+  color: var(--market-forest);
+}
+.market-filter-pill.is-selected,
+.tag-auction {
+  background: var(--market-forest);
+  color: var(--market-warm-white);
+}
+.market-chip.is-current {
+  background: var(--market-coral-soft);
+  color: var(--market-forest);
+}
+.market-category-link:hover,
+.market-category-link.is-active {
+  border-color: var(--market-coral);
+}
+.market-listing-card:hover {
+  border-color: color-mix(in oklab, var(--market-coral) 58%, var(--market-line));
+}
+
+/* Lovable Preview sync checkpoint: 2026-11-25 */

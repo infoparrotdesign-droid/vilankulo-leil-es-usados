@@ -1,0 +1,61 @@
+name: VilaShop - Isolated sale financial trigger test
+
+on:
+  push:
+    branches:
+      - vilashop/fix-sale-financial-trigger
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/tests/**"
+      - ".github/workflows/vilashop-sale-trigger-test.yml"
+  pull_request:
+    branches:
+      - vilashop/rebuild-foundation
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/tests/**"
+      - ".github/workflows/vilashop-sale-trigger-test.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-trigger-test:
+    name: Test sale financial trigger on disposable PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: vilashop_trigger_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d vilashop_trigger_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Create isolated fixture without production data
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d vilashop_trigger_test -v ON_ERROR_STOP=1 -f supabase/tests/sale-financial-trigger-setup.sql
+
+      - name: Apply only the new trigger migration to disposable database
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d vilashop_trigger_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261126110000_fix_sale_financial_capture_trigger.sql
+
+      - name: Assert sale creation and private financial capture
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d vilashop_trigger_test -v ON_ERROR_STOP=1 -f supabase/tests/sale-financial-trigger.test.sql

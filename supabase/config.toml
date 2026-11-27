@@ -1,1 +1,10 @@
-project_id = "cgynwbykgqnccdlpsiab"
+project_id = "ibwasunbdqplanwhnexf"
+
+[functions.cleanup-listing-photos]
+verify_jwt = false
+
+[functions.send-admin-notification]
+verify_jwt = false
+
+[functions.flag-message]
+verify_jwt = true

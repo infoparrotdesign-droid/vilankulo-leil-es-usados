@@ -1,0 +1,88 @@
+name: VilaShop - Independent Preview
+
+on:
+  push:
+    branches:
+      - vilashop/rebuild-foundation
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: vilashop-independent-preview
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Validate and build Cloudflare Worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out VilaShop
+        uses: actions/checkout@v5
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Run automated tests
+        run: bun run test
+
+      - name: Build independent Preview
+        run: bun run build
+        env:
+          NITRO_PRESET: cloudflare_module
+
+      - name: Verify Cloudflare output
+        run: |
+          test -s .output/server/index.mjs
+          test -d .output/public
+          echo "Cloudflare Worker bundle and public assets are present."
+
+      - name: Upload Worker build
+        uses: actions/upload-artifact@v4
+        with:
+          name: vilashop-cloudflare-preview
+          path: .output/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 2
+
+  deploy-preview:
+    name: Deploy independent Preview
+    needs: build
+    if: vars.CLOUDFLARE_PREVIEW_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Download Worker build
+        uses: actions/download-artifact@v4
+        with:
+          name: vilashop-cloudflare-preview
+          path: .output/
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: >-
+            deploy .output/server/index.mjs
+            --name vilashop-preview
+            --compatibility-date 2026-11-27
+            --compatibility-flags nodejs_compat
+            --assets .output/public
+            --var "SUPABASE_URL:https://ibwasunbdqplanwhnexf.supabase.co"
+            --var "SUPABASE_PUBLISHABLE_KEY:${{ secrets.SUPABASE_PUBLISHABLE_KEY }}"
