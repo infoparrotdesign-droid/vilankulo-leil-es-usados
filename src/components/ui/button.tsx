@@ -43,7 +43,11 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     // explicitly with type="submit"; links rendered through Slot keep their own props.
     const forwardedProps = asChild ? props : { ...props, type };
     return (
-      <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...forwardedProps} />
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        {...forwardedProps}
+      />
     );
   },
 );
