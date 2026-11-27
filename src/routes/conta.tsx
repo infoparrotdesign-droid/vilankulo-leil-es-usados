@@ -623,16 +623,16 @@ function AccountPage() {
                     <>
                       <p>
                         Comissão VilaShop (
-                        {(sellerFinancials[sale.id].commission_rate * 100).toLocaleString("pt-MZ")}
+                        {(sellerFinancials[sale.id]!.commission_rate * 100).toLocaleString("pt-MZ")}
                         %):{" "}
                         <strong>
-                          {sellerFinancials[sale.id].commission_amount.toLocaleString("pt-MZ")} MT
+                          {sellerFinancials[sale.id]!.commission_amount.toLocaleString("pt-MZ")} MT
                         </strong>
                       </p>
                       <p>
                         Valor líquido a receber:{" "}
                         <strong>
-                          {sellerFinancials[sale.id].seller_net_amount.toLocaleString("pt-MZ")} MT
+                          {sellerFinancials[sale.id]!.seller_net_amount.toLocaleString("pt-MZ")} MT
                         </strong>
                       </p>
                     </>
