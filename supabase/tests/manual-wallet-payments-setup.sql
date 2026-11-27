@@ -110,6 +110,10 @@ as $
   );
 $;
 grant execute on function public.test_marketplace_sale_state(uuid,uuid,text,text,text,text,text) to authenticated;
+create or replace function public.get_test_sale_id(_listing_id uuid)
+returns uuid language sql stable security definer set search_path=''
+as $ select s.id from public.marketplace_sales s where s.listing_id=_listing_id order by s.id desc limit 1 $;
+grant execute on function public.get_test_sale_id(uuid) to authenticated;
 
 insert into auth.users(id) values
  ('10000000-0000-4000-8000-000000000001'),
