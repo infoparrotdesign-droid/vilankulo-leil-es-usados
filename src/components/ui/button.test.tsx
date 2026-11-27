@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { FormEvent } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { Button } from "@/components/ui/button";
 describe("shared Button", () => {
   it("runs click handlers without submitting a surrounding form by default", () => {
     const onClick = vi.fn();
-    const onSubmit = vi.fn((event: React.FormEvent<HTMLFormElement>) => event.preventDefault());
+    const onSubmit = vi.fn((event: FormEvent<HTMLFormElement>) => event.preventDefault());
 
     render(
       <form onSubmit={onSubmit}>
