@@ -105,7 +105,7 @@ as $$
 declare s public.marketplace_sales; result_row public.marketplace_sales; uid uuid:=auth.uid();
 begin
   if uid is null then raise exception 'Inicie sessão.'; end if;
-  if _payment_method not in ('e-Mola','M-Pesa') then raise exception 'Escolha e-Mola ou M-Pesa.'; end if;
+  if _payment_method is null or _payment_method not in ('e-Mola','M-Pesa') then raise exception 'Escolha e-Mola ou M-Pesa.'; end if;
   if nullif(btrim(_payment_reference),'') is null or char_length(btrim(_payment_reference)) > 160 then
     raise exception 'Indique uma referência de pagamento válida.';
   end if;
@@ -136,7 +136,7 @@ begin
     raise exception 'Apenas a administração pode registar a liquidação.';
   end if;
   if nullif(btrim(_payout_reference),'') is null or char_length(btrim(_payout_reference)) > 160 then
-    raise exception 'Registe a referência da transferência e-Mola.';
+    raise exception 'Registe uma referência válida da transferência e-Mola (máximo 160 caracteres).';
   end if;
   if not exists(select 1 from public.seller_payout_details d
     join public.marketplace_sales s on s.seller_id=d.seller_id
