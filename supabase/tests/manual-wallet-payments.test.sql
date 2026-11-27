@@ -39,9 +39,7 @@ select public.create_marketplace_sale_with_payment(
  '40000000-0000-4000-8000-000000000004','in_person','M-Pesa',null
 );
 do $$ begin
-  if not exists(select 1 from public.marketplace_sales
-    where listing_id='40000000-0000-4000-8000-000000000004'
-      and buyer_id=auth.uid() and payment_method='M-Pesa' and status='awaiting_payment') then
+  if not public.test_marketplace_sale_state('40000000-0000-4000-8000-000000000004',auth.uid(),'awaiting_payment','M-Pesa') then
     raise exception 'FAIL: M-Pesa checkout did not create expected sale';
   end if;
   begin
@@ -56,7 +54,7 @@ end $$;
 
 -- Buyer reports payment; admin can inspect seller details, but cannot settle early.
 select public.report_marketplace_payment(
- (select id from public.marketplace_sales where listing_id='40000000-0000-4000-8000-000000000004'),
+ public.get_test_sale_id('40000000-0000-4000-8000-000000000004'),
  'M-Pesa','MPESA-TEST-001'
 );
 reset role;
@@ -68,7 +66,7 @@ do $$ begin
   end if;
   begin
     perform public.admin_record_seller_payout(
-      (select id from public.marketplace_sales where listing_id='40000000-0000-4000-8000-000000000004'),
+      public.get_test_sale_id('40000000-0000-4000-8000-000000000004'),
       'PAYOUT-TOO-EARLY'
     );
     raise exception 'FAIL: payout allowed before delivery confirmation';
@@ -84,14 +82,11 @@ where listing_id='40000000-0000-4000-8000-000000000004';
 set role authenticated;
 select set_config('request.jwt.claim.sub','30000000-0000-4000-8000-000000000003',false);
 select public.admin_record_seller_payout(
- (select id from public.marketplace_sales where listing_id='40000000-0000-4000-8000-000000000004'),
+ public.get_test_sale_id('40000000-0000-4000-8000-000000000004'),
  'EMOLA-PAYOUT-001'
 );
 do $$ begin
-  if not exists(select 1 from public.marketplace_sales
-    where listing_id='40000000-0000-4000-8000-000000000004'
-      and status='payout_recorded' and payout_method='e-Mola'
-      and payout_content='VILASHOP' and payout_reference='EMOLA-PAYOUT-001') then
+  if not public.test_marketplace_sale_state('40000000-0000-4000-8000-000000000004','10000000-0000-4000-8000-000000000001','payout_recorded',null,'e-Mola','VILASHOP','EMOLA-PAYOUT-001') then
     raise exception 'FAIL: seller payout metadata is incorrect';
   end if;
 end $$;
@@ -103,7 +98,7 @@ select public.create_marketplace_sale_with_payment(
 do $ begin
   begin
     perform public.report_marketplace_payment(
-      (select id from public.marketplace_sales where listing_id='50000000-0000-4000-8000-000000000005'),
+      public.get_test_sale_id('50000000-0000-4000-8000-000000000005'),
       null,'NULL-METHOD'
     );
     raise exception 'FAIL: null payment method was accepted';
@@ -121,7 +116,7 @@ select set_config('request.jwt.claim.sub','30000000-0000-4000-8000-000000000003'
 do $ begin
   begin
     perform public.admin_record_seller_payout(
-      (select id from public.marketplace_sales where listing_id='50000000-0000-4000-8000-000000000005'),
+      public.get_test_sale_id('50000000-0000-4000-8000-000000000005'),
       repeat('X',161)
     );
     raise exception 'FAIL: oversized payout reference was accepted';
@@ -138,7 +133,7 @@ select set_config('request.jwt.claim.sub','30000000-0000-4000-8000-000000000003'
 do $ begin
   begin
     perform public.admin_record_seller_payout(
-      (select id from public.marketplace_sales where listing_id='50000000-0000-4000-8000-000000000005'),
+      public.get_test_sale_id('50000000-0000-4000-8000-000000000005'),
       'PAYOUT-BLOCKED'
     );
     raise exception 'FAIL: payout allowed while dispute is open';
