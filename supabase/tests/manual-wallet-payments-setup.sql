@@ -99,7 +99,7 @@ create or replace function public.test_marketplace_sale_state(
   _payout_method text default null,_payout_content text default null,_payout_reference text default null
 ) returns boolean
 language sql stable security definer set search_path=''
-as $
+as $fn$
   select exists(
     select 1 from public.marketplace_sales s
     where s.listing_id=_listing_id and s.buyer_id=_buyer_id and s.status=_status
@@ -108,11 +108,11 @@ as $
       and (_payout_content is null or s.payout_content=_payout_content)
       and (_payout_reference is null or s.payout_reference=_payout_reference)
   );
-$;
+$fn$;
 grant execute on function public.test_marketplace_sale_state(uuid,uuid,text,text,text,text,text) to authenticated;
 create or replace function public.get_test_sale_id(_listing_id uuid)
 returns uuid language sql stable security definer set search_path=''
-as $ select s.id from public.marketplace_sales s where s.listing_id=_listing_id order by s.id desc limit 1 $;
+as $fn$ select s.id from public.marketplace_sales s where s.listing_id=_listing_id order by s.id desc limit 1 $fn$;
 grant execute on function public.get_test_sale_id(uuid) to authenticated;
 
 insert into auth.users(id) values
