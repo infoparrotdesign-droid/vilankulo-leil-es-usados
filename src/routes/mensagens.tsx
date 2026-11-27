@@ -62,36 +62,46 @@ function MessagesPage() {
   const [sending, setSending] = useState(false);
 
   const loadConversations = useCallback(async () => {
-    const { data, error } = await db.rpc("list_my_conversations");
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    const rows = (data ?? []) as Conversation[];
-    setConversations(rows);
-    setActiveId((current) => {
-      const requested = new URLSearchParams(window.location.search).get("conversation");
-      if (requested && rows.some((row) => row.conversation_id === requested)) {
-        return requested;
-      }
-      if (current && rows.some((row) => row.conversation_id === current)) {
-        return current;
-      }
-      return rows[0]?.conversation_id ?? null;
-    });
-  }, []);
-
-  const loadMessages = useCallback(
-    async (conversationId: string) => {
-      const { data, error } = await db.rpc("get_conversation_messages", {
-        _conversation_id: conversationId,
-      });
+    try {
+      const { data, error } = await db.rpc("list_my_conversations");
       if (error) {
         toast.error(error.message);
         return;
       }
-      setMessages((data ?? []) as ChatMessage[]);
-      await loadConversations();
+      const rows = (data ?? []) as Conversation[];
+      setConversations(rows);
+      setActiveId((current) => {
+        const requested = new URLSearchParams(window.location.search).get("conversation");
+        if (requested && rows.some((row) => row.conversation_id === requested)) {
+          return requested;
+        }
+        if (current && rows.some((row) => row.conversation_id === current)) {
+          return current;
+        }
+        return rows[0]?.conversation_id ?? null;
+      });
+    } catch (error) {
+      console.error("Could not load conversations", error);
+      toast.error("Não foi possível carregar as conversas. Tente actualizar.");
+    }
+  }, []);
+
+  const loadMessages = useCallback(
+    async (conversationId: string) => {
+      try {
+        const { data, error } = await db.rpc("get_conversation_messages", {
+          _conversation_id: conversationId,
+        });
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
+        setMessages((data ?? []) as ChatMessage[]);
+        await loadConversations();
+      } catch (error) {
+        console.error("Could not load conversation messages", error);
+        toast.error("Não foi possível carregar as mensagens. Tente novamente.");
+      }
     },
     [loadConversations],
   );
@@ -128,17 +138,23 @@ function MessagesPage() {
       return;
     }
     setSending(true);
-    const { error } = await db.rpc("send_conversation_message", {
-      _conversation_id: activeId,
-      _body: body,
-    });
-    setSending(false);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      const { error } = await db.rpc("send_conversation_message", {
+        _conversation_id: activeId,
+        _body: body,
+      });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      setDraft("");
+      await loadMessages(activeId);
+    } catch (error) {
+      console.error("Could not send conversation message", error);
+      toast.error("Não foi possível enviar a mensagem. Verifique a ligação e tente novamente.");
+    } finally {
+      setSending(false);
     }
-    setDraft("");
-    await loadMessages(activeId);
   }
 
   const activeConversation = conversations.find((item) => item.conversation_id === activeId);
