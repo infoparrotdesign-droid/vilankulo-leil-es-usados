@@ -134,9 +134,9 @@ function AdminPage() {
       );
     setListings(listingResult.data ?? []);
     setReports(reportResult.data ?? []);
-    setSales((saleResult.data ?? []) as any[]);
+    setSales((saleResult.data ?? []) as unknown as Array<Record<string, unknown>>);
     setDisputes(disputeResult.data ?? []);
-    setMessageFlags((messageFlagResult.data ?? []) as any[]);
+    setMessageFlags((messageFlagResult.data ?? []) as unknown as AdminMessageFlag[]);
     if (payoutDetailsResult.error) {
       toast.error("Não foi possível carregar os dados privados de recebimento dos vendedores.");
     }
