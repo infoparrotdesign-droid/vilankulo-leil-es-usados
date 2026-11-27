@@ -23,7 +23,9 @@ describe("VilaShop message moderation categories", () => {
 
 describe("flagMessageForModeration input validation", () => {
   const invoke = vi.fn();
-  const client = { functions: { invoke } } as unknown as Parameters<typeof flagMessageForModeration>[0];
+  const client = { functions: { invoke } } as unknown as Parameters<
+    typeof flagMessageForModeration
+  >[0];
   const validInput = {
     messageId: "message-1",
     category: "threat" as const,
