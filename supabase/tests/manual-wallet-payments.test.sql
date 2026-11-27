@@ -96,32 +96,56 @@ do $$ begin
   end if;
 end $$;
 
--- An open dispute blocks settlement.
+-- Null payment methods and oversized payout references must be rejected.
+select public.create_marketplace_sale_with_payment(
+ '50000000-0000-4000-8000-000000000005','in_person','e-Mola',null
+);
+do $ begin
+  begin
+    perform public.report_marketplace_payment(
+      (select id from public.marketplace_sales where listing_id='50000000-0000-4000-8000-000000000005'),
+      null,'NULL-METHOD'
+    );
+    raise exception 'FAIL: null payment method was accepted';
+  exception when others then
+    if sqlerrm like 'FAIL:%' then raise; end if;
+  end;
+end $;
+
+-- An open dispute blocks settlement; oversized references are also rejected.
 reset role;
 update public.marketplace_sales set status='delivery_confirmed'
 where listing_id='50000000-0000-4000-8000-000000000005';
-insert into public.marketplace_sales(listing_id,buyer_id,seller_id,agreed_price,delivery_method,status)
-values('50000000-0000-4000-8000-000000000005',
- '10000000-0000-4000-8000-000000000001',
- '20000000-0000-4000-8000-000000000002',2000,'in_person','delivery_confirmed')
-on conflict do nothing;
-insert into public.sale_disputes(sale_id,status)
-select id,'open' from public.marketplace_sales
-where listing_id='50000000-0000-4000-8000-000000000005'
-order by id desc limit 1;
 set role authenticated;
 select set_config('request.jwt.claim.sub','30000000-0000-4000-8000-000000000003',false);
-do $$ begin
+do $ begin
   begin
     perform public.admin_record_seller_payout(
-      (select id from public.marketplace_sales where listing_id='50000000-0000-4000-8000-000000000005' order by id desc limit 1),
+      (select id from public.marketplace_sales where listing_id='50000000-0000-4000-8000-000000000005'),
+      repeat('X',161)
+    );
+    raise exception 'FAIL: oversized payout reference was accepted';
+  exception when others then
+    if sqlerrm like 'FAIL:%' then raise; end if;
+  end;
+end $;
+reset role;
+insert into public.sale_disputes(sale_id,status)
+select id,'open' from public.marketplace_sales
+where listing_id='50000000-0000-4000-8000-000000000005';
+set role authenticated;
+select set_config('request.jwt.claim.sub','30000000-0000-4000-8000-000000000003',false);
+do $ begin
+  begin
+    perform public.admin_record_seller_payout(
+      (select id from public.marketplace_sales where listing_id='50000000-0000-4000-8000-000000000005'),
       'PAYOUT-BLOCKED'
     );
     raise exception 'FAIL: payout allowed while dispute is open';
   exception when others then
     if sqlerrm like 'FAIL:%' then raise; end if;
   end;
-end $$;
+end $;
 
 reset role;
 rollback;
