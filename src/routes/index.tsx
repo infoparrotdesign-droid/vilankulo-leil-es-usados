@@ -962,15 +962,21 @@ function Marketplace() {
       return;
     }
     setBusy(true);
-    const { data, error } = await communityDb.rpc("start_listing_conversation", {
-      _listing_id: listing.id,
-    });
-    setBusy(false);
-    if (error || typeof data !== "string") {
-      toast.error(error?.message ?? "Não foi possível iniciar a conversa. Tente novamente.");
-      return;
+    try {
+      const { data, error } = await communityDb.rpc("start_listing_conversation", {
+        _listing_id: listing.id,
+      });
+      if (error || typeof data !== "string" || !data) {
+        toast.error(error?.message ?? "Não foi possível iniciar a conversa. Tente novamente.");
+        return;
+      }
+      window.location.assign(`/mensagens?conversation=${encodeURIComponent(data)}`);
+    } catch (error) {
+      console.error("Could not start seller conversation", error);
+      toast.error("Não foi possível iniciar a conversa. Verifique a ligação e tente novamente.");
+    } finally {
+      setBusy(false);
     }
-    window.location.href = `/mensagens?conversation=${encodeURIComponent(data)}`;
   }
 
   async function submitBid(event: FormEvent<HTMLFormElement>, listing: Listing) {
@@ -1988,9 +1994,10 @@ function Marketplace() {
                   <Button
                     type="button"
                     variant="ghost"
+                    disabled={busy}
                     onClick={() => void startSellerConversation(selectedListing)}
                   >
-                    Iniciar conversa
+                    {busy ? "A abrir conversa…" : "Iniciar conversa"}
                   </Button>
                 </div>
               ) : (
