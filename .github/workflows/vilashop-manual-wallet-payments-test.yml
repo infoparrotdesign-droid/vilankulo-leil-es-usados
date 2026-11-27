@@ -58,6 +58,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d vilashop_wallet_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261126140000_vilashop_manual_wallet_payments.sql
+      - name: Install post-migration test helpers
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d vilashop_wallet_test -v ON_ERROR_STOP=1 -f supabase/tests/manual-wallet-payments-test-helpers.sql
       - name: Verify checkout, privacy, reporting, and payout rules
         env:
           PGPASSWORD: postgres
